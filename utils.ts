@@ -1,29 +1,41 @@
-import fs from 'fs';
+export function memoize<T extends (...args: any[]) => any>(func: T): T {
+  const cache: Map<string, ReturnType<T>> = new Map();
 
-export interface DataObject {
-    [key: string]: any;
-}
-
-export function readJsonFile(filePath: string): DataObject | null {
-    try {
-        const data = fs.readFileSync(filePath, 'utf8');
-        return JSON.parse(data);
-    } catch (error) {
-        console.error('Error reading JSON file:', error);
-        return null;
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key)!;
     }
+    const result = func(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
 }
 
-export function writeJsonFile(filePath: string, data: DataObject): boolean {
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error writing JSON file:', error);
-        return false;
+export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
+export function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+  let lastFunc: NodeJS.Timeout;
+  let lastRan: number = 0;
+
+  return ((...args: Parameters<T>) => {
+    const context = this;
+    const now = Date.now();
+    if (now - lastRan >= limit) {
+      func.apply(context, args);
+      lastRan = now;
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(() => {
+        func.apply(context, args);
+      }, limit - (now - lastRan));
     }
-}
-
-export function mergeDataObjects(obj1: DataObject, obj2: DataObject): DataObject {
-    return { ...obj1, ...obj2 };
+  }) as T;
 }
