@@ -1,41 +1,34 @@
-export function memoize<T extends (...args: any[]) => any>(func: T): T {
-  const cache: Map<string, ReturnType<T>> = new Map();
+import { createLogger, format, transports } from 'winston';
 
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) {
-      return cache.get(key)!;
-    }
-    const result = func(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
-}
+const { combine, timestamp, printf } = format;
 
-export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
-  let timeout: NodeJS.Timeout;
+const logFormat = printf(({ level, message, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+});
 
-  return ((...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  }) as T;
-}
+const logger = createLogger({
+    level: 'info',
+    format: combine(
+        timestamp(),
+        logFormat
+    ),
+    transports: [
+        new transports.Console(),
+        new transports.File({
+            filename: 'combined.log',
+            level: 'info',
+            maxsize: 1000000,
+            maxFiles: '14d',
+            tailable: true
+        }),
+        new transports.File({
+            filename: 'error.log',
+            level: 'error',
+            maxsize: 1000000,
+            maxFiles: '14d',
+            tailable: true
+        }),
+    ],
+});
 
-export function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
-  let lastFunc: NodeJS.Timeout;
-  let lastRan: number = 0;
-
-  return ((...args: Parameters<T>) => {
-    const context = this;
-    const now = Date.now();
-    if (now - lastRan >= limit) {
-      func.apply(context, args);
-      lastRan = now;
-    } else {
-      clearTimeout(lastFunc);
-      lastFunc = setTimeout(() => {
-        func.apply(context, args);
-      }, limit - (now - lastRan));
-    }
-  }) as T;
-}
+export default logger;
