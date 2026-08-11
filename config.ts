@@ -1,20 +1,23 @@
-import { validateInput } from './helpers';
-
-interface Config {
-    apiKey: string;
-    timeout: number;
+interface AppConfig {
+    appName: string;
+    appPort: number;
+    databaseURL: string;
+    enableLogging: boolean;
 }
 
-const config: Config = {
-    apiKey: process.env.API_KEY || '',
-    timeout: parseInt(process.env.TIMEOUT || '5000', 10),
+const config: AppConfig = {
+    appName: "MyApp",
+    appPort: 3000,
+    databaseURL: "mongodb://localhost:27017/myapp",
+    enableLogging: true,
 };
 
-function mainProcessingLoop(input: any) {
-    if (!validateInput(input)) {
-        throw new Error('Invalid input');
-    }
-    // main processing logic here
+function getConfig(): AppConfig {
+    return config;
 }
 
-export { config, mainProcessingLoop };
+function setConfig(newConfig: Partial<AppConfig>): void {
+    Object.assign(config, newConfig);
+}
+
+export { AppConfig, getConfig, setConfig };
