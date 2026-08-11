@@ -1,11 +1,20 @@
-export interface Config {  host: string;  port: number;  username: string;  password: string;  database: string;}
+import { validateInput } from './helpers';
 
-export class ConfigLoader {  private config: Config;
-  constructor(configPath: string) {    this.config = this.loadConfig(configPath);  }
+interface Config {
+    apiKey: string;
+    timeout: number;
+}
 
-  private loadConfig(path: string): Config {    try {      const data = require(path);      this.validateConfig(data);      return data;    } catch (error) {      throw new Error(`Failed to load config: ${error.message}`);    }
-  }
+const config: Config = {
+    apiKey: process.env.API_KEY || '',
+    timeout: parseInt(process.env.TIMEOUT || '5000', 10),
+};
 
-  private validateConfig(config: any): void {    const requiredFields = ['host', 'port', 'username', 'password', 'database'];    for (const field of requiredFields) {      if (!config[field]) {        throw new Error(`Missing required config field: ${field}`);      }    }  }
+function mainProcessingLoop(input: any) {
+    if (!validateInput(input)) {
+        throw new Error('Invalid input');
+    }
+    // main processing logic here
+}
 
-  public getConfig(): Config {    return this.config;  }}
+export { config, mainProcessingLoop };
