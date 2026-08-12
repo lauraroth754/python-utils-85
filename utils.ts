@@ -1,23 +1,34 @@
-import axios, { AxiosRequestConfig } from 'axios';
-
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-
-async function retryNetworkOperation(config: AxiosRequestConfig): Promise<any> {
-    let attempt = 0;
-    while (attempt < MAX_RETRIES) {
-        try {
-            const response = await axios(config);
-            return response.data;
-        } catch (error) {
-            if (attempt < MAX_RETRIES - 1) {
-                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-            } else {
-                throw error;
-            }
-        }
-        attempt++;
+export function safeParseJson<T>(string: string): T | null {
+    try {
+        return JSON.parse(string);
+    } catch (error) {
+        console.error('Invalid JSON string:', error);
+        return null;
     }
 }
 
-export { retryNetworkOperation };
+export function divideNumbers(dividend: number, divisor: number): number | null {
+    if (divisor === 0) {
+        console.error('Division by zero is not allowed.');
+        return null;
+    }
+    return dividend / divisor;
+}
+
+export function readFileSync(path: string): string | null {
+    const fs = require('fs');
+    try {
+        return fs.readFileSync(path, 'utf8');
+    } catch (error) {
+        console.error('Error reading file:', error);
+        return null;
+    }
+}
+
+export function getValidatedUserInput(input: any): string | null {
+    if (typeof input !== 'string' || input.trim() === '') {
+        console.error('Invalid input provided.');
+        return null;
+    }
+    return input.trim();
+}
