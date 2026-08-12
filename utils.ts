@@ -1,34 +1,23 @@
-import { createLogger, format, transports } from 'winston';
+import axios, { AxiosRequestConfig } from 'axios';
 
-const { combine, timestamp, printf } = format;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
-const logFormat = printf(({ level, message, timestamp }) => {
-    return `${timestamp} ${level}: ${message}`;
-});
+async function retryNetworkOperation(config: AxiosRequestConfig): Promise<any> {
+    let attempt = 0;
+    while (attempt < MAX_RETRIES) {
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (error) {
+            if (attempt < MAX_RETRIES - 1) {
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+            } else {
+                throw error;
+            }
+        }
+        attempt++;
+    }
+}
 
-const logger = createLogger({
-    level: 'info',
-    format: combine(
-        timestamp(),
-        logFormat
-    ),
-    transports: [
-        new transports.Console(),
-        new transports.File({
-            filename: 'combined.log',
-            level: 'info',
-            maxsize: 1000000,
-            maxFiles: '14d',
-            tailable: true
-        }),
-        new transports.File({
-            filename: 'error.log',
-            level: 'error',
-            maxsize: 1000000,
-            maxFiles: '14d',
-            tailable: true
-        }),
-    ],
-});
-
-export default logger;
+export { retryNetworkOperation };
