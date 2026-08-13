@@ -1,34 +1,27 @@
-export function safeParseJson<T>(string: string): T | null {
-    try {
-        return JSON.parse(string);
-    } catch (error) {
-        console.error('Invalid JSON string:', error);
-        return null;
+import axios from 'axios';
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+async function retry<T>(fn: () => Promise<T>, retries: number = MAX_RETRIES): Promise<T> {
+    let attempts = 0;
+
+    while (attempts < retries) {
+        try {
+            return await fn();
+        } catch (error) {
+            attempts++;
+            if (attempts === retries) throw error;
+            await new Promise(res => setTimeout(res, RETRY_DELAY));
+        }
     }
+    throw new Error('Max retries reached');
 }
 
-export function divideNumbers(dividend: number, divisor: number): number | null {
-    if (divisor === 0) {
-        console.error('Division by zero is not allowed.');
-        return null;
-    }
-    return dividend / divisor;
+export async function fetchData(url: string) {
+    return await retry(() => axios.get(url));
 }
 
-export function readFileSync(path: string): string | null {
-    const fs = require('fs');
-    try {
-        return fs.readFileSync(path, 'utf8');
-    } catch (error) {
-        console.error('Error reading file:', error);
-        return null;
-    }
-}
-
-export function getValidatedUserInput(input: any): string | null {
-    if (typeof input !== 'string' || input.trim() === '') {
-        console.error('Invalid input provided.');
-        return null;
-    }
-    return input.trim();
+export async function postData(url: string, data: any) {
+    return await retry(() => axios.post(url, data));
 }
