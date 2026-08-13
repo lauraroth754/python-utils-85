@@ -1,19 +1,19 @@
-function deepMerge<T>(target: T, source: Partial<T>): T {
-  for (const key in source) {
-    if (source[key] instanceof Object && key in target) {
-      Object.assign(source[key], deepMerge(target[key], source[key]));
+import axios, { AxiosRequestConfig } from 'axios';
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+async function retryRequest(config: AxiosRequestConfig, retries: number = MAX_RETRIES): Promise<any> {
+    try {
+        const response = await axios(config);
+        return response.data;
+    } catch (error) {
+        if (retries === 0) {
+            throw error;
+        }
+        await new Promise(res => setTimeout(res, RETRY_DELAY));
+        return retryRequest(config, retries - 1);
     }
-  }
-  Object.assign(target || {}, source);
-  return target;
 }
 
-function isEmpty(obj: Record<string, unknown>): boolean {
-  return Object.keys(obj).length === 0;
-}
-
-function flattenArray<T>(arrays: T[][]): T[] {
-  return [].concat(...arrays);
-}
-
-export { deepMerge, isEmpty, flattenArray };
+export { retryRequest };
