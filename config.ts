@@ -1,23 +1,27 @@
-interface AppConfig {
-    appName: string;
-    appPort: number;
-    databaseURL: string;
-    enableLogging: boolean;
-}
+import * as fs from 'fs';
+import * as path from 'path';
 
-const config: AppConfig = {
-    appName: "MyApp",
-    appPort: 3000,
-    databaseURL: "mongodb://localhost:27017/myapp",
-    enableLogging: true,
-};
+interface Config {  
+    port: number;  
+    dbUrl: string;  
+    logLevel: string;  
+}  
 
-function getConfig(): AppConfig {
-    return config;
-}
+const defaultConfig: Config = {  
+    port: 3000,  
+    dbUrl: 'mongodb://localhost:27017/myapp',  
+    logLevel: 'info'  
+};  
 
-function setConfig(newConfig: Partial<AppConfig>): void {
-    Object.assign(config, newConfig);
-}
+function loadConfig(configPath: string): Config {  
+    let userConfig: Partial<Config> = {};  
+    try {  
+        const configFile = fs.readFileSync(path.resolve(configPath), 'utf8');  
+        userConfig = JSON.parse(configFile);  
+    } catch (error) {  
+        console.warn('Could not load configuration file, using defaults.');  
+    }  
+    return { ...defaultConfig, ...userConfig };  
+}  
 
-export { AppConfig, getConfig, setConfig };
+export { loadConfig, Config };
