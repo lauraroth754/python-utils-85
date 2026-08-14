@@ -1,19 +1,33 @@
-async function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-async function retry<T>(fn: () => Promise<T>, retries: number, delay: number): Promise<T> {
-    for (let i = 0; i < retries; i++) {
-        try {
-            return await fn();
-        } catch (error) {
-            if (i === retries - 1) {
-                throw error;
-            }
-            await sleep(delay);
+export function flattenArray<T>(arr: (T | T[])[]): T[] {
+    let result: T[] = [];
+    for (const item of arr) {
+        if (Array.isArray(item)) {
+            result = result.concat(flattenArray(item));
+        } else {
+            result.push(item);
         }
     }
-    throw new Error('Max retries reached');
+    return result;
 }
 
-export { retry };
+export function deepClone<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+export function isEmpty(obj: Record<string, unknown>): boolean {
+    return Object.keys(obj).length === 0;
+}
+
+export function mergeDeep<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
+    for (const key in source) {
+        if (source[key] && typeof source[key] === 'object') {
+            if (!target[key]) {
+                target[key] = {} as T[keyof T];
+            }
+            mergeDeep(target[key] as T, source[key] as Partial<T>);
+        } else {
+            target[key] = source[key];
+        }
+    }
+    return target;
+}
