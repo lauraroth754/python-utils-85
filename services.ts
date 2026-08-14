@@ -1,13 +1,31 @@
-import axios from 'axios';
+import { createLogger, format, transports } from 'winston';
+import { DailyRotateFile } from 'winston-daily-rotate-file';
 
-interface ApiResponse<T> {
-    data: T;
-    status: number;
-}
+const logFormat = format.printf(({ level, message, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+});
 
-async function fetchData<T>(url: string): Promise<ApiResponse<T>> {
-    const response = await axios.get<T>(url);
-    return { data: response.data, status: response.status };
-}
+const logger = createLogger({
+    level: 'info',
+    format: format.combine(
+        format.timestamp(),
+        logFormat
+    ),
+    transports: [
+        new DailyRotateFile({
+            filename: 'logs/%DATE%-results.log',
+            datePattern: 'YYYY-MM-DD',
+            zippedArchive: true,
+            maxSize: '20m',
+            maxFiles: '14d'
+        }),
+        new transports.Console({
+            format: format.combine(
+                format.colorize(),
+                logFormat
+            )
+        })
+    ]
+});
 
-export { fetchData };
+export default logger;
