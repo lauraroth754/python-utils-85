@@ -1,33 +1,21 @@
-export function flattenArray<T>(arr: (T | T[])[]): T[] {
-    let result: T[] = [];
-    for (const item of arr) {
-        if (Array.isArray(item)) {
-            result = result.concat(flattenArray(item));
-        } else {
-            result.push(item);
-        }
-    }
-    return result;
-}
-
-export function deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
-}
-
-export function isEmpty(obj: Record<string, unknown>): boolean {
-    return Object.keys(obj).length === 0;
-}
-
-export function mergeDeep<T extends Record<string, unknown>>(target: T, source: Partial<T>): T {
-    for (const key in source) {
-        if (source[key] && typeof source[key] === 'object') {
-            if (!target[key]) {
-                target[key] = {} as T[keyof T];
+export async function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number = 1000): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (i < retries - 1) {
+                await new Promise(res => setTimeout(res, delay));
+            } else {
+                throw error;
             }
-            mergeDeep(target[key] as T, source[key] as Partial<T>);
-        } else {
-            target[key] = source[key];
         }
     }
-    return target;
+}
+
+export async function fetchWithRetry(url: string): Promise<Response> {
+    return await retry(() => fetch(url));
+}
+
+export async function postWithRetry(url: string, data: any): Promise<Response> {
+    return await retry(() => fetch(url, { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }));
 }
