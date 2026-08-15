@@ -1,31 +1,36 @@
-import { createLogger, format, transports } from 'winston';
-import { DailyRotateFile } from 'winston-daily-rotate-file';
+import { Request, Response } from 'express';
 
-const logFormat = format.printf(({ level, message, timestamp }) => {
-    return `${timestamp} ${level}: ${message}`;
-});
+export class UserService {
+    private users: any[] = [];
 
-const logger = createLogger({
-    level: 'info',
-    format: format.combine(
-        format.timestamp(),
-        logFormat
-    ),
-    transports: [
-        new DailyRotateFile({
-            filename: 'logs/%DATE%-results.log',
-            datePattern: 'YYYY-MM-DD',
-            zippedArchive: true,
-            maxSize: '20m',
-            maxFiles: '14d'
-        }),
-        new transports.Console({
-            format: format.combine(
-                format.colorize(),
-                logFormat
-            )
-        })
-    ]
-});
+    constructor() {}
 
-export default logger;
+    public addUser(user: any): void {
+        this.users.push(user);
+    }
+
+    public getUsers(req: Request, res: Response): void {
+        res.json(this.users);
+    }
+
+    public findUser(id: string): any | undefined {
+        return this.users.find(user => user.id === id);
+    }
+
+    public updateUser(id: string, updatedUser: any): boolean {
+        const index = this.users.findIndex(user => user.id === id);
+        if (index === -1) return false;
+        this.users[index] = { ...this.users[index], ...updatedUser };
+        return true;
+    }
+
+    public deleteUser(id: string): boolean {
+        const index = this.users.findIndex(user => user.id === id);
+        if (index === -1) return false;
+        this.users.splice(index, 1);
+        return true;
+    }
+}
+
+const userService = new UserService();
+export default userService;
