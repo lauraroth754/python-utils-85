@@ -1,1 +1,23 @@
-type InputData = { name: string; age: number; email: string; }; function isValidEmail(email: string): boolean { const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; return re.test(email); } function validateInput(input: InputData): boolean { if (!input.name || typeof input.name !== 'string') return false; if (!input.age || typeof input.age !== 'number' || input.age < 0) return false; if (!isValidEmail(input.email)) return false; return true; } function processInput(input: InputData) { if (!validateInput(input)) { throw new Error('Invalid input data'); } console.log('Processing input:', input); } const inputData: InputData = { name: 'John Doe', age: 30, email: 'john.doe@example.com' }; processInput(inputData);
+function deepMerge<T>(target: T, source: Partial<T>): T {
+  for (const key in source) {
+    if (source[key] instanceof Object) {
+      Object.assign(source[key], deepMerge(target[key], source[key]));
+    }
+  }
+  Object.assign(target || {}, source);
+  return target;
+}
+
+function flattenArray<T>(array: T[][]): T[] {
+  return array.reduce((flat, toFlatten) => flat.concat(Array.isArray(toFlatten) ? flattenArray(toFlatten) : toFlatten), []);
+}
+
+function getUniqueValues<T>(array: T[]): T[] {
+  return Array.from(new Set(array));
+}
+
+function isObject(value: any): value is Record<string, any> {
+  return value !== null && typeof value === 'object';
+}
+
+export { deepMerge, flattenArray, getUniqueValues, isObject };
