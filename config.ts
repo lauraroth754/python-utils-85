@@ -1,27 +1,37 @@
 import * as fs from 'fs';
-import * as path from 'path';
 
-interface Config {  
-    port: number;  
-    dbUrl: string;  
-    logLevel: string;  
-}  
+interface Config {
+    port: number;
+    host: string;
+}
 
-const defaultConfig: Config = {  
-    port: 3000,  
-    dbUrl: 'mongodb://localhost:27017/myapp',  
-    logLevel: 'info'  
-};  
+const defaultConfig: Config = {
+    port: 3000,
+    host: 'localhost',
+};
 
-function loadConfig(configPath: string): Config {  
-    let userConfig: Partial<Config> = {};  
-    try {  
-        const configFile = fs.readFileSync(path.resolve(configPath), 'utf8');  
-        userConfig = JSON.parse(configFile);  
-    } catch (error) {  
-        console.warn('Could not load configuration file, using defaults.');  
-    }  
-    return { ...defaultConfig, ...userConfig };  
-}  
+function loadConfig(filePath: string): Config {
+    try {
+        const data = fs.readFileSync(filePath, 'utf-8');
+        const parsedConfig = JSON.parse(data);
+        validateConfig(parsedConfig);
+        return { ...defaultConfig, ...parsedConfig };
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+            throw new Error('Invalid JSON format in config file.');
+        }
+        if (error.code === 'ENOENT') {
+            console.warn('Config file not found, using default configuration.');
+            return defaultConfig;
+        }
+        throw new Error('Error loading config: ' + error.message);
+    }
+}
 
-export { loadConfig, Config };
+function validateConfig(config: any): asserts config is Config {
+    if (typeof config.port !== 'number' || typeof config.host !== 'string') {
+        throw new Error('Invalid config structure.');
+    }
+}
+
+export { loadConfig };
