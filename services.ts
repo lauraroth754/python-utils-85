@@ -1,36 +1,27 @@
-import { Request, Response } from 'express';
+import axios, { AxiosError } from 'axios';
 
-export class UserService {
-    private users: any[] = [];
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
 
-    constructor() {}
-
-    public addUser(user: any): void {
-        this.users.push(user);
-    }
-
-    public getUsers(req: Request, res: Response): void {
-        res.json(this.users);
-    }
-
-    public findUser(id: string): any | undefined {
-        return this.users.find(user => user.id === id);
-    }
-
-    public updateUser(id: string, updatedUser: any): boolean {
-        const index = this.users.findIndex(user => user.id === id);
-        if (index === -1) return false;
-        this.users[index] = { ...this.users[index], ...updatedUser };
-        return true;
-    }
-
-    public deleteUser(id: string): boolean {
-        const index = this.users.findIndex(user => user.id === id);
-        if (index === -1) return false;
-        this.users.splice(index, 1);
-        return true;
+async function fetchWithRetry(url: string, retries = MAX_RETRIES): Promise<any> {
+    try {
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        if (retries > 0 && isRetryableError(error)) {
+            await delay(RETRY_DELAY);
+            return fetchWithRetry(url, retries - 1);
+        }
+        throw error;
     }
 }
 
-const userService = new UserService();
-export default userService;
+function isRetryableError(error: AxiosError): boolean {
+    return error.response?.status === 500 || error.code === 'ECONNABORTED';
+}
+
+function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export { fetchWithRetry };
