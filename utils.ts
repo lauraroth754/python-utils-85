@@ -1,49 +1,40 @@
-export function safeParseJSON<T>(jsonString: string): T | null {
-    try {
-        const parsed = JSON.parse(jsonString);
-        if (typeof parsed !== 'object' || parsed === null) {
-            throw new Error('Parsed JSON is not an object');
+export function memoize(fn: (...args: any[]) => any): (...args: any[]) => any {
+    const cache = new Map();
+    return function (...args: any[]) {
+        const key = JSON.stringify(args);
+        if (cache.has(key)) {
+            return cache.get(key);
         }
-        return parsed as T;
-    } catch (error) {
-        console.error('JSON parsing error:', error);
-        return null;
-    }
+        const result = fn(...args);
+        cache.set(key, result);
+        return result;
+    };
 }
 
-export function validateInput(input: any, expectedType: string): input is any {
-    const typeOfInput = typeof input;
-    if (typeOfInput !== expectedType) {
-        console.error(`Invalid input type: expected ${expectedType}, got ${typeOfInput}`);
-        return false;
-    }
-    return true;
+export function debounce(fn: Function, delay: number): Function {
+    let timeoutId: NodeJS.Timeout;
+    return function (...args: any[]) {
+        if (timeoutId) {
+            clearTimeout(timeoutId);
+        }
+        timeoutId = setTimeout(() => fn(...args), delay);
+    };
 }
 
-export function divideNumbers(numerator: number, denominator: number): number | null {
-    if (denominator === 0) {
-        console.error('Denominator cannot be zero');
-        return null;
-    }
-    return numerator / denominator;
-}
-
-export function fetchData(url: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url);
-        xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                resolve(safeParseJSON(xhr.responseText));
-            } else {
-                console.error('Request failed with status:', xhr.status);
-                reject(new Error(`Request failed: ${xhr.statusText}`));
-            }
-        };
-        xhr.onerror = () => {
-            console.error('Network error');
-            reject(new Error('Network error'));
-        };
-        xhr.send();
-    });
+export function throttle(fn: Function, limit: number): Function {
+    let lastFn: NodeJS.Timeout, lastRan: number;
+    return function (...args: any[]) {
+        if (!lastRan) {
+            fn(...args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(lastFn);
+            lastFn = setTimeout(() => {
+                if (Date.now() - lastRan >= limit) {
+                    fn(...args);
+                    lastRan = Date.now();
+                }
+            }, limit - (Date.now() - lastRan));
+        }
+    };
 }
