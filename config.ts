@@ -1,25 +1,31 @@
 import fs from 'fs';
 import path from 'path';
+import * as dotenv from 'dotenv';
 
-interface Config {
-    [key: string]: any;
-}
+dotenv.config();
+
+type Config = {
+    port: number;
+    host: string;
+    dbUri: string;
+};
 
 const defaultConfig: Config = {
-    host: 'localhost',
     port: 3000,
-    logLevel: 'info',
+    host: 'localhost',
+    dbUri: 'mongodb://localhost:27017/default',
 };
 
-const loadConfig = (filePath: string): Config => {
-    const fullPath = path.resolve(__dirname, filePath);
-    if (fs.existsSync(fullPath)) {
-        const fileConfig = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-        return { ...defaultConfig, ...fileConfig };
+function loadConfig(): Config {
+    const configPath = path.resolve(__dirname, 'config.json');
+    let userConfig: Partial<Config> = {};
+
+    if (fs.existsSync(configPath)) {
+        const fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        userConfig = { ...fileConfig };
     }
-    return defaultConfig;
-};
 
-const config = loadConfig('config.json');
+    return { ...defaultConfig, ...userConfig, port: Number(process.env.PORT) || defaultConfig.port };
+}
 
-export default config;
+export const config = loadConfig();
