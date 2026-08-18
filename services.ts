@@ -1,21 +1,31 @@
-type ServiceCallback = (data: any) => void;
+import { dataProcessor } from './utils';
 
-class Service {
-    private callbacks: ServiceCallback[] = [];
+interface ServiceResponse {
+    success: boolean;
+    data?: any;
+    error?: string;
+}
 
-    public registerCallback(callback: ServiceCallback): void {
-        this.callbacks.push(callback);
-    }
+class PerformanceService {
+    private cache: Map<string, any> = new Map();
 
-    public notify(data: any): void {
-        for (const callback of this.callbacks) {
-            callback(data);
+    async fetchData(key: string): Promise<ServiceResponse> {
+        if (this.cache.has(key)) {
+            return { success: true, data: this.cache.get(key) };
+        }
+        try {
+            const data = await this.getDataFromSource(key);
+            this.cache.set(key, data);
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     }
 
-    public clearCallbacks(): void {
-        this.callbacks = [];
+    private async getDataFromSource(key: string): Promise<any> {
+        // Simulate network call
+        return new Promise((resolve) => setTimeout(() => resolve({ key, value: Math.random() }), 1000));
     }
 }
 
-export default Service;
+export const performanceService = new PerformanceService();
