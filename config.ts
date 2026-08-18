@@ -1,26 +1,25 @@
-import { createLogger, format, transports } from 'winston';
-import { combine, timestamp, json } from 'logform';
+import fs from 'fs';
+import path from 'path';
 
-const logger = createLogger({
-    level: 'info',
-    format: combine(
-        timestamp(),
-        json()
-    ),
-    transports: [
-        new transports.Console(),
-        new transports.File({
-            filename: 'error.log',
-            level: 'error',
-            maxSize: '20m',
-            maxFiles: '14d',
-        }),
-        new transports.File({
-            filename: 'combined.log',
-            maxSize: '20m',
-            maxFiles: '14d',
-        }),
-    ],
-});
+interface Config {
+    [key: string]: any;
+}
 
-export default logger;
+const defaultConfig: Config = {
+    host: 'localhost',
+    port: 3000,
+    logLevel: 'info',
+};
+
+const loadConfig = (filePath: string): Config => {
+    const fullPath = path.resolve(__dirname, filePath);
+    if (fs.existsSync(fullPath)) {
+        const fileConfig = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+        return { ...defaultConfig, ...fileConfig };
+    }
+    return defaultConfig;
+};
+
+const config = loadConfig('config.json');
+
+export default config;
