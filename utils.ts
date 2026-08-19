@@ -1,1 +1,39 @@
-function memoize(fn: (...args: any[]) => any) { const cache: { [key: string]: any } = {}; return (...args: any[]) => { const key = JSON.stringify(args); if (cache[key]) { return cache[key]; } const result = fn(...args); cache[key] = result; return result; }; } function debounce<T extends (...args: any[]) => void>(func: T, delay: number) { let timeoutId: NodeJS.Timeout; return (...args: Parameters<T>) => { clearTimeout(timeoutId); timeoutId = setTimeout(() => { func(...args); }, delay); }; } function throttle<T extends (...args: any[]) => void>(func: T, limit: number) { let lastCall: number; return (...args: Parameters<T>) => { const now = Date.now(); if (!lastCall || now - lastCall >= limit) { lastCall = now; func(...args); } }; } export { memoize, debounce, throttle };
+export function isEmpty(value: unknown): boolean {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'object') return Object.keys(value).length === 0;
+    return false;
+}
+
+export function deepClone<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+export function debounce(func: Function, wait: number): Function {
+    let timeout: NodeJS.Timeout | null = null;
+    return function (...args: any[]) {
+        const context = this;
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+}
+
+export function throttle(func: Function, limit: number): Function {
+    let lastFunc: NodeJS.Timeout | null;
+    let lastRan: number;
+    return function (...args: any[]) {
+        const context = this;
+        if (!lastRan) {
+            func.apply(context, args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(lastFunc!);
+            lastFunc = setTimeout(function () {
+                if (Date.now() - lastRan >= limit) {
+                    func.apply(context, args);
+                    lastRan = Date.now();
+                }
+            }, limit - (Date.now() - lastRan));
+        }
+    };
+}
