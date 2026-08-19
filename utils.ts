@@ -1,21 +1,8 @@
-function isEmpty(value: any): boolean {
-    return value === null || value === undefined || (typeof value === 'string' && value.trim() === '') || (Array.isArray(value) && value.length === 0);
-}
+function validateInput(input: any): boolean { return typeof input === 'string' && input.trim() !== ''; }
 
-function deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
-}
+function processInput(input: any): void { if (!validateInput(input)) { throw new Error('Invalid input'); } console.log(`Processing: ${input}`); }
 
-function mergeDeep<T>(target: T, source: Partial<T>): T {
-    for (const key in source) {
-        if (source[key] instanceof Object) {
-            if (!(key in target)) Object.assign(target, { [key]: {} });
-            mergeDeep(target[key], source[key]);
-        } else {
-            Object.assign(target, { [key]: source[key] });
-        }
-    }
-    return target;
-}
+function mainLoop(inputs: any[]): void { inputs.forEach(input => { try { processInput(input); } catch (error) { console.error(error.message); } }); }
 
-export { isEmpty, deepClone, mergeDeep };
+const inputs = ['valid input', '', null, 'another valid input'];
+mainLoop(inputs);
