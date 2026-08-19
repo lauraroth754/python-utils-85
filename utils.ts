@@ -1,8 +1,1 @@
-function validateInput(input: any): boolean { return typeof input === 'string' && input.trim() !== ''; }
-
-function processInput(input: any): void { if (!validateInput(input)) { throw new Error('Invalid input'); } console.log(`Processing: ${input}`); }
-
-function mainLoop(inputs: any[]): void { inputs.forEach(input => { try { processInput(input); } catch (error) { console.error(error.message); } }); }
-
-const inputs = ['valid input', '', null, 'another valid input'];
-mainLoop(inputs);
+function memoize(fn: (...args: any[]) => any) { const cache: { [key: string]: any } = {}; return (...args: any[]) => { const key = JSON.stringify(args); if (cache[key]) { return cache[key]; } const result = fn(...args); cache[key] = result; return result; }; } function debounce<T extends (...args: any[]) => void>(func: T, delay: number) { let timeoutId: NodeJS.Timeout; return (...args: Parameters<T>) => { clearTimeout(timeoutId); timeoutId = setTimeout(() => { func(...args); }, delay); }; } function throttle<T extends (...args: any[]) => void>(func: T, limit: number) { let lastCall: number; return (...args: Parameters<T>) => { const now = Date.now(); if (!lastCall || now - lastCall >= limit) { lastCall = now; func(...args); } }; } export { memoize, debounce, throttle };
