@@ -1,52 +1,29 @@
 # python-utils-85
 
-**A collection of utility functions for streamlining Python development. This library provides commonly used functionalities that can enhance productivity and code efficiency.**
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A TypeScript library that brings common Python utility functions to modern JavaScript and TypeScript applications. It focuses on making iteration and data manipulation feel natural for developers familiar with Python's standard library.
 
 ## Features
-
-- **String Manipulation**: Simplifies common string operations like trimming, formatting, and case conversion.
-- **Data Validation**: Implements robust functions to validate inputs such as email addresses, URLs, and phone numbers.
-- **File Handling**: Provides utilities for reading, writing, and parsing files in various formats including CSV and JSON.
-- **Date and Time Operations**: Offers helpers for timezone conversions, date formatting, and calculating time differences.
+- `range` generator supporting start, stop, step parameters with negative and floating point increments
+- Iterator helpers like `chain`, `cycle`, and `zipLongest` for building complex sequences
+- `format` function implementing Python's str.format style templating with named and indexed fields
+- `deepClone` utility for creating independent copies of nested objects and arrays
 
 ## Installation
 
-To install `python-utils-85`, ensure you have Python and pip installed, then run the following command:
-
 ```bash
-pip install python-utils-85
+npm install python-utils-85
 ```
 
 ## Basic Usage
 
-Here’s a quick example of how to use the key features of `python-utils-85`:
+```typescript
+import { range, format, chain } from 'python-utils-85';
 
-```python
-from python_utils import StringUtils, Validator, FileUtils, DateUtils
+const numbers = [...range(1, 10, 2)];
+console.log(numbers); // [1, 3, 5, 7, 9]
 
-# String Manipulation
-formatted_string = StringUtils.format_string(" hello world ")
-print(formatted_string)  # Output: "Hello World"
-
-# Data Validation
-is_valid_email = Validator.is_valid_email("example@example.com")
-print(is_valid_email)  # Output: True
-
-# File Handling
-data = FileUtils.read_json('data.json')
-print(data)
-
-# Date and Time Operations
-formatted_date = DateUtils.format_date('2023-10-05', '%d-%m-%Y')
-print(formatted_date)  # Output: "05-10-2023"
+const greeting = format("Welcome, {user}!", { user: "Developer" });
+console.log(greeting);
 ```
-
-## License
-
-![MIT License](https://img.shields.io/badge/license-MIT-green)
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
-
---- 
-
-Unlock your potential with `python-utils-85` and simplify your Python projects today!
