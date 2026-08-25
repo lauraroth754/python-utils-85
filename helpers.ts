@@ -1,30 +1,30 @@
-import fs from 'fs';
-import path from 'path';
-
-interface Config {  [key: string]: any;}
-
-dotenvConfig = () => {
-  const envFilePath = path.resolve(__dirname, '.env');
-  if (fs.existsSync(envFilePath)) {
-    const env = fs.readFileSync(envFilePath, 'utf-8');
-    return env;
+export interface RetryOptions {
+  maxAttempts?: number;
+  delayMs?: number;
+  backoffMultiplier?: number;
+  shouldRetry?: (error: unknown) => boolean;
+}
+export async function retry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? 5;
+  const delayMs = options.delayMs ?? 1000;
+  const backoffMultiplier = options.backoffMultiplier ?? 2;
+  const shouldRetry = options.shouldRetry ?? (() => true);
+  let lastError: unknown;
+  let currentDelay = delayMs;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxAttempts || !shouldRetry(error)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay = Math.floor(currentDelay * backoffMultiplier);
+    }
   }
-  return null;
-};
-
-const loadConfig = (defaultConfig: Config): Config => {
-  const envVariables = dotenvConfig();
-  const config: Config = { ...defaultConfig };
-
-  if (envVariables) {
-    const entries = envVariables.split('\n');
-    entries.forEach(entry => {
-      const [key, value] = entry.split('=');
-      config[key.trim()] = value.trim();
-    });
-  }
-
-  return config;
-};
-
-export { loadConfig };
+  throw lastError;
+}
