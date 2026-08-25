@@ -1,34 +1,59 @@
-export type CommonValue = string | number | boolean | null | undefined;
-export type OperationResult<T> = { success: boolean; data?: T; error?: string; };
-export function isEmpty(value: any): boolean {
-if (value == null) return true;
-if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
-if (typeof value === 'object') return Object.keys(value).length === 0;
-return false;
+export type Nullable<T> = T | null;
+export type Optional<T> = T | undefined;
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
-export function getValueOrDefault<T>(value: T | null | undefined, defaultValue: T): T {
-return value != null ? value : defaultValue;
+
+export function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-export function mergeObjects<T extends object, U extends object>(obj1: T, obj2: U): T & U {
-return { ...obj1, ...obj2 } as T & U;
+
+export function isEmpty(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value as object).length === 0;
+  return false;
 }
-export function uniqueArray<T>(arr: T[]): T[] {
-return [...new Set(arr)];
+
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
 }
-export function groupBy<T, K extends keyof T>(arr: T[], key: K): Record<string, T[]> {
-return arr.reduce((acc: Record<string, T[]>, item: T) => {
-const groupKey = String(item[key]);
-if (!acc[groupKey]) acc[groupKey] = [];
-acc[groupKey].push(item);
-return acc;
-}, {});
+
+export function deepClone<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(deepClone) as T;
+  }
+  const cloned: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone((obj as any)[key]);
+    }
+  }
+  return cloned;
 }
-export function sleep(ms: number): Promise<void> {
-return new Promise(resolve => setTimeout(resolve, ms));
-}
-export function retry<T>(fn: () => Promise<T>, retries: number = 3, delay: number = 1000): Promise<T> {
-return fn().catch((err: any) => {
-if (retries <= 0) throw err;
-return sleep(delay).then(() => retry(fn, retries - 1, delay));
-});
+
+export function groupBy<T, K extends string | number | symbol>(
+  array: T[],
+  keyFn: (item: T) => K
+): Record<K, T[]> {
+  return array.reduce((acc, item) => {
+    const key = keyFn(item);
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<K, T[]>);
 }
