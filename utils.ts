@@ -1,39 +1,30 @@
-export function isEmpty(value: unknown): boolean {
-    if (value === null || value === undefined) return true;
-    if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
-    if (typeof value === 'object') return Object.keys(value).length === 0;
-    return false;
+export interface RetryOptions {
+  retries?: number;
+  delay?: number;
+  factor?: number;
 }
 
-export function deepClone<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
-}
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const retries = options.retries ?? 3;
+  const delay = options.delay ?? 1000;
+  const factor = options.factor ?? 2;
 
-export function debounce(func: Function, wait: number): Function {
-    let timeout: NodeJS.Timeout | null = null;
-    return function (...args: any[]) {
-        const context = this;
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-    };
-}
+  let attempt = 0;
+  let currentDelay = delay;
 
-export function throttle(func: Function, limit: number): Function {
-    let lastFunc: NodeJS.Timeout | null;
-    let lastRan: number;
-    return function (...args: any[]) {
-        const context = this;
-        if (!lastRan) {
-            func.apply(context, args);
-            lastRan = Date.now();
-        } else {
-            clearTimeout(lastFunc!);
-            lastFunc = setTimeout(function () {
-                if (Date.now() - lastRan >= limit) {
-                    func.apply(context, args);
-                    lastRan = Date.now();
-                }
-            }, limit - (Date.now() - lastRan));
-        }
-    };
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      attempt++;
+      if (attempt >= retries) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay *= factor;
+    }
+  }
 }
