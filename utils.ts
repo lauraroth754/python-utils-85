@@ -1,32 +1,34 @@
-export type ComputeFunction<T, R> = (input: T) => R;
-export class OptimizedProcessor<T, R> {
-  private cache: Map<string, {value: R, time: number}> = new Map();
-  private maxEntries: number;
-  private expiry: number;
-  constructor(maxEntries = 50, expiryMs = 30000) {
-    this.maxEntries = maxEntries;
-    this.expiry = expiryMs;
-  }
-  process(input: T, compute: ComputeFunction<T, R>): R {
-    const key = JSON.stringify(input);
-    const currentTime = Date.now();
-    const cached = this.cache.get(key);
-    if (cached && (currentTime - cached.time) < this.expiry) {
-      return cached.value;
+export interface RetryConfig {
+  maxAttempts: number;
+  initialDelay: number;
+  maxDelay: number;
+  backoffFactor: number;
+}
+
+export async function retryNetworkOperation<T>(
+  fn: () => Promise<T>,
+  config: Partial<RetryConfig> = {}
+): Promise<T> {
+  const defaults: RetryConfig = {
+    maxAttempts: 3,
+    initialDelay: 1000,
+    maxDelay: 10000,
+    backoffFactor: 2
+  };
+  const { maxAttempts, initialDelay, maxDelay, backoffFactor } = { ...defaults, ...config };
+  let attempt = 0;
+  let delay = initialDelay;
+  while (attempt < maxAttempts) {
+    try {
+      return await fn();
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(delay * backoffFactor, maxDelay);
     }
-    if (this.cache.size >= this.maxEntries) {
-      const iterator = this.cache.keys();
-      const oldest = iterator.next().value;
-      this.cache.delete(oldest);
-    }
-    const result = compute(input);
-    this.cache.set(key, {value: result, time: currentTime});
-    return result;
   }
-  getCacheSize(): number {
-    return this.cache.size;
-  }
-  clearCache(): void {
-    this.cache.clear();
-  }
+  throw new Error("Retry failed");
 }
