@@ -1,60 +1,71 @@
-export function safeDivide(a: number, b: number): number {
-  if (typeof a !== "number" || typeof b !== "number") {
-    throw new Error("Both arguments must be numbers");
-  }
-  if (b === 0) {
-    throw new Error("Division by zero is not allowed");
-  }
-  return a / b;
+export interface ErrorResult {
+  error: string;
+  code: number;
 }
 
-export function safeArrayAccess<T>(array: T[], index: number): T {
-  if (!Array.isArray(array)) {
-    throw new Error("First argument must be an array");
-  }
-  if (typeof index !== "number" || index < 0 || !Number.isInteger(index)) {
-    throw new Error("Index must be a non-negative integer");
-  }
-  if (index >= array.length) {
-    throw new Error("Index out of array bounds");
-  }
-  return array[index];
+export function createError(message: string, code: number = 400): ErrorResult {
+  return { error: message, code };
 }
 
-export function safeParseJSON<T>(jsonString: string): T {
+export function handleNullOrUndefined<T>(value: T | null | undefined, errorMsg: string): T {
+  if (value === null || value === undefined) {
+    throw new Error(errorMsg);
+  }
+  return value;
+}
+
+export function safeDivide(numerator: number, denominator: number): number {
+  if (denominator === 0) {
+    throw new Error("Cannot divide by zero");
+  }
+  return numerator / denominator;
+}
+
+export function processArray<T>(arr: T[] | null | undefined): T[] {
+  if (!arr) {
+    throw new Error("Array is null or undefined");
+  }
+  if (arr.length === 0) {
+    throw new Error("Array is empty");
+  }
+  return arr;
+}
+
+export function safeJSONParse(jsonString: string): any {
   if (typeof jsonString !== "string") {
     throw new Error("Input must be a string");
   }
-  const trimmed = jsonString.trim();
-  if (trimmed === "") {
-    throw new Error("Cannot parse empty string");
+  if (jsonString.trim() === "") {
+    throw new Error("Input string is empty");
   }
   try {
-    return JSON.parse(trimmed) as T;
-  } catch (error) {
-    throw new Error("Invalid JSON string provided");
+    return JSON.parse(jsonString);
+  } catch (e) {
+    throw new Error("Invalid JSON format");
   }
 }
 
-export function safeGetProperty(obj: any, key: string, defaultValue: any = undefined): any {
-  if (obj === null || typeof obj !== "object") {
-    return defaultValue;
+export function getNestedValue(obj: any, path: string): any {
+  if (!obj || typeof obj !== "object") {
+    throw new Error("Invalid object provided");
   }
-  if (typeof key !== "string" || key === "") {
-    return defaultValue;
+  if (!path || typeof path !== "string") {
+    throw new Error("Invalid path provided");
   }
-  if (Object.prototype.hasOwnProperty.call(obj, key)) {
-    return obj[key];
+  const keys = path.split(".");
+  let current = obj;
+  for (const key of keys) {
+    if (current === null || current === undefined || !(key in current)) {
+      throw new Error("Path " + path + " not found");
+    }
+    current = current[key];
   }
-  return defaultValue;
+  return current;
 }
 
-export function validatePositiveNumber(value: number): number {
-  if (typeof value !== "number") {
-    throw new Error("Value must be a number");
-  }
-  if (value <= 0) {
-    throw new Error("Value must be positive");
+export function validateNumber(value: any): number {
+  if (typeof value !== "number" || isNaN(value)) {
+    throw new Error("Value must be a valid number");
   }
   return value;
 }
