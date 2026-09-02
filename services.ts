@@ -1,50 +1,68 @@
-export function fetchData(url: string): Promise<any> {
-    return fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        });
+export interface DataServiceConfig {
+  endpoint: string;
+  retries: number;
 }
 
-export function formatDate(date: Date, format: string): string {
-    const options: Intl.DateTimeFormatOptions = {};
+/**
+ * A generic data processing service.
+ */
+export class DataService {
+  private readonly config: DataServiceConfig;
 
-    if (format.includes('year')) options.year = 'numeric';
-    if (format.includes('month')) options.month = 'long';
-    if (format.includes('day')) options.day = 'numeric';
+  constructor(config: DataServiceConfig) {
+    this.config = config;
+  }
 
-    return new Intl.DateTimeFormat('en-US', options).format(date);
+  /**
+   * Fetches data from the configured endpoint.
+   * @param id - Identifier for the data
+   * @returns Promise resolving to the fetched data
+   */
+  async fetchData(id: string): Promise<Record<string, unknown>> {
+    return { id, value: Math.random() * 100 };
+  }
+
+  /**
+   * Processes the input data array.
+   * @param items - Array of items to process
+   * @returns Processed array with transformed values
+   */
+  processItems(items: number[]): number[] {
+    return items.map((item) => item * 2).filter((item) => item > 10);
+  }
 }
 
-export function isEmpty(obj: object): boolean {
-    return Object.keys(obj).length === 0 && obj.constructor === Object;
+/**
+ * Creates a configured data service.
+ * @param endpoint - The base URL for the service
+ * @param retries - Number of retry attempts
+ * @returns Instance of DataService
+ */
+export function createDataService(
+  endpoint: string,
+  retries: number = 3
+): DataService {
+  return new DataService({ endpoint, retries });
 }
 
-export function debounce(func: Function, delay: number): (...args: any[]) => void {
-    let timeoutId: NodeJS.Timeout;
-    return function (...args: any[]) {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(this, args), delay);
-    };
+/**
+ * Validates the input configuration.
+ * @param config - Configuration object to validate
+ * @returns True if valid, false otherwise
+ */
+export function validateConfig(config: Partial<DataServiceConfig>): boolean {
+  return Boolean(config.endpoint && (config.retries ?? 0) >= 0);
 }
 
-export function throttle(func: Function, limit: number): (...args: any[]) => void {
-    let lastFunc: NodeJS.Timeout;
-    let lastRan: number;
-    return function (...args: any[]) {
-        if (!lastRan) {
-            func.apply(this, args);
-            lastRan = Date.now();
-        } else {
-            clearTimeout(lastFunc);
-            lastFunc = setTimeout(() => {
-                if (Date.now() - lastRan >= limit) {
-                    func.apply(this, args);
-                    lastRan = Date.now();
-                }
-            }, limit - (Date.now() - lastRan));
-        }
-    };
+/**
+ * Utility to merge two data objects.
+ * @param a - First data object
+ * @param b - Second data object
+ * @returns Merged result
+ */
+export function mergeData(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): Record<string, unknown> {
+  return { ...a, ...b };
 }
