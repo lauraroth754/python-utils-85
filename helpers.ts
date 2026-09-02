@@ -1,71 +1,63 @@
-export interface ErrorResult {
-  error: string;
-  code: number;
-}
+const MIN_INPUT = 0;
+const MAX_INPUT = 10000;
 
-export function createError(message: string, code: number = 400): ErrorResult {
-  return { error: message, code };
-}
-
-export function handleNullOrUndefined<T>(value: T | null | undefined, errorMsg: string): T {
-  if (value === null || value === undefined) {
-    throw new Error(errorMsg);
+function validateNumber(value: unknown): number {
+  if (typeof value !== "number") {
+    throw new Error("Input must be a number");
+  }
+  if (isNaN(value)) {
+    throw new Error("Input cannot be NaN");
+  }
+  if (value < MIN_INPUT || value > MAX_INPUT) {
+    throw new Error("Input out of range");
   }
   return value;
 }
 
-export function safeDivide(numerator: number, denominator: number): number {
-  if (denominator === 0) {
-    throw new Error("Cannot divide by zero");
-  }
-  return numerator / denominator;
-}
-
-export function processArray<T>(arr: T[] | null | undefined): T[] {
-  if (!arr) {
-    throw new Error("Array is null or undefined");
-  }
-  if (arr.length === 0) {
-    throw new Error("Array is empty");
-  }
-  return arr;
-}
-
-export function safeJSONParse(jsonString: string): any {
-  if (typeof jsonString !== "string") {
+function validateString(str: unknown): string {
+  if (typeof str !== "string") {
     throw new Error("Input must be a string");
   }
-  if (jsonString.trim() === "") {
-    throw new Error("Input string is empty");
+  const trimmed = str.trim();
+  if (trimmed.length === 0) {
+    throw new Error("String cannot be empty");
   }
-  try {
-    return JSON.parse(jsonString);
-  } catch (e) {
-    throw new Error("Invalid JSON format");
+  if (trimmed.length > 100) {
+    throw new Error("String too long");
   }
+  return trimmed;
 }
 
-export function getNestedValue(obj: any, path: string): any {
-  if (!obj || typeof obj !== "object") {
-    throw new Error("Invalid object provided");
+interface DataItem {
+  id: number;
+  value: number;
+  name: string;
+}
+
+function processItem(raw: unknown): DataItem {
+  if (typeof raw !== "object" || raw === null) {
+    throw new Error("Item must be an object");
   }
-  if (!path || typeof path !== "string") {
-    throw new Error("Invalid path provided");
-  }
-  const keys = path.split(".");
-  let current = obj;
-  for (const key of keys) {
-    if (current === null || current === undefined || !(key in current)) {
-      throw new Error("Path " + path + " not found");
+  const obj = raw as any;
+  const id = validateNumber(obj.id);
+  const value = validateNumber(obj.value);
+  const name = validateString(obj.name);
+  return { id, value, name };
+}
+
+function mainProcessingLoop(inputs: unknown[]): DataItem[] {
+  const results: DataItem[] = [];
+  for (let i = 0; i < inputs.length; i++) {
+    const input = inputs[i];
+    try {
+      const validated = processItem(input);
+      const processedValue = validated.value * 2;
+      results.push({ id: validated.id, value: processedValue, name: validated.name });
+    } catch (error) {
+      console.error(`Validation error at index ${i}`);
     }
-    current = current[key];
   }
-  return current;
+  return results;
 }
 
-export function validateNumber(value: any): number {
-  if (typeof value !== "number" || isNaN(value)) {
-    throw new Error("Value must be a valid number");
-  }
-  return value;
-}
+export { mainProcessingLoop, validateNumber, validateString, processItem };
