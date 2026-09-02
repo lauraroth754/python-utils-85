@@ -1,26 +1,60 @@
-export interface ProcessingInput {
-  value: unknown;
-  strict: boolean;
+export function safeDivide(a: number, b: number): number {
+  if (typeof a !== "number" || typeof b !== "number") {
+    throw new Error("Both arguments must be numbers");
+  }
+  if (b === 0) {
+    throw new Error("Division by zero is not allowed");
+  }
+  return a / b;
 }
 
-export function validateInput(input: unknown): asserts input is Record<string, unknown> {
-  if (input === null || typeof input !== 'object') {
-    throw new TypeError('Input must be a valid non-null object');
+export function safeArrayAccess<T>(array: T[], index: number): T {
+  if (!Array.isArray(array)) {
+    throw new Error("First argument must be an array");
+  }
+  if (typeof index !== "number" || index < 0 || !Number.isInteger(index)) {
+    throw new Error("Index must be a non-negative integer");
+  }
+  if (index >= array.length) {
+    throw new Error("Index out of array bounds");
+  }
+  return array[index];
+}
+
+export function safeParseJSON<T>(jsonString: string): T {
+  if (typeof jsonString !== "string") {
+    throw new Error("Input must be a string");
+  }
+  const trimmed = jsonString.trim();
+  if (trimmed === "") {
+    throw new Error("Cannot parse empty string");
+  }
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch (error) {
+    throw new Error("Invalid JSON string provided");
   }
 }
 
-export function processMainLoop(inputs: ProcessingInput[]): unknown[] {
-  const results: unknown[] = [];
-  
-  for (const item of inputs) {
-    validateInput(item.value);
-    
-    if (item.strict && Object.keys(item.value).length === 0) {
-      throw new Error('Strict mode: input object cannot be empty');
-    }
-    
-    results.push(item.value);
+export function safeGetProperty(obj: any, key: string, defaultValue: any = undefined): any {
+  if (obj === null || typeof obj !== "object") {
+    return defaultValue;
   }
-  
-  return results;
+  if (typeof key !== "string" || key === "") {
+    return defaultValue;
+  }
+  if (Object.prototype.hasOwnProperty.call(obj, key)) {
+    return obj[key];
+  }
+  return defaultValue;
+}
+
+export function validatePositiveNumber(value: number): number {
+  if (typeof value !== "number") {
+    throw new Error("Value must be a number");
+  }
+  if (value <= 0) {
+    throw new Error("Value must be positive");
+  }
+  return value;
 }
