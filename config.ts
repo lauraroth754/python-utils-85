@@ -1,31 +1,34 @@
-export interface ConfigOptions {
-  [key: string]: unknown;
+export interface AppConfig {
+  host: string;
+  port: number;
+  env: 'development' | 'production' | 'test';
+  debug: boolean;
+  timeout: number;
 }
 
-export class ConfigLoader {
-  private config: ConfigOptions;
+const DEFAULT_CONFIG: AppConfig = {
+  host: 'localhost',
+  port: 8080,
+  env: 'development',
+  debug: false,
+  timeout: 5000,
+};
 
-  constructor(defaults: ConfigOptions = {}) {
-    this.config = { ...defaults };
+export function loadConfig(customConfig: Partial<AppConfig> = {}): AppConfig {
+  const envPort = typeof process !== 'undefined' && process.env?.PORT ? parseInt(process.env.PORT, 10) : undefined;
+  const envDebug = typeof process !== 'undefined' && process.env?.DEBUG ? process.env.DEBUG === 'true' : undefined;
+  const envNodeEnv = typeof process !== 'undefined' && process.env?.NODE_ENV as AppConfig['env'] | undefined;
+
+  const envConfig: Partial<AppConfig> = {};
+  if (envPort !== undefined && !isNaN(envPort)) envConfig.port = envPort;
+  if (envDebug !== undefined) envConfig.debug = envDebug;
+  if (envNodeEnv !== undefined && ['development', 'production', 'test'].includes(envNodeEnv)) {
+    envConfig.env = envNodeEnv;
   }
 
-  public get<T>(key: string, fallback: T): T {
-    return (this.config[key] as T) ?? fallback;
-  }
-
-  public set(key: string, value: unknown): void {
-    this.config[key] = value;
-  }
-
-  public load(newConfig: ConfigOptions): void {
-    this.config = { ...this.config, ...newConfig };
-  }
-
-  public all(): ConfigOptions {
-    return { ...this.config };
-  }
-}
-
-export function createConfig(defaults?: ConfigOptions): ConfigLoader {
-  return new ConfigLoader(defaults);
+  return {
+    ...DEFAULT_CONFIG,
+    ...envConfig,
+    ...customConfig,
+  };
 }
