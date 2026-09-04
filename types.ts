@@ -1,21 +1,30 @@
-export type PythonValue = string | number | boolean | null | undefined | PythonList | PythonDict;
-
-export interface PythonList extends Array<PythonValue> {}
-
-export interface PythonDict {
-  [key: string]: PythonValue;
+export interface ProcessResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 }
 
-export interface StringUtilOptions {
-  encoding?: string;
-  errors?: 'strict' | 'ignore' | 'replace';
+export interface ExecutionOptions {
+  timeout?: number;
+  cwd?: string;
+  env?: Record<string, string>;
 }
 
-export interface DictUtilOptions<T = PythonValue> {
-  defaultFactory?: () => T;
-  deepCopy?: boolean;
+export type PythonVersion = '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
+
+export interface EnvironmentConfig {
+  venvPath: string;
+  pythonExecutable: string;
+  version: PythonVersion;
 }
 
-export type Predicate<T> = (value: T) => boolean;
+export interface RegistryMap {
+  [key: string]: string | number | boolean;
+}
 
-export type Comparator<T> = (a: T, b: T) => number;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code?: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
+}
