@@ -1,35 +1,40 @@
-export interface ProcessingConfig {
-  input: unknown;
-  maxRetries: number;
-  timeoutMs: number;
+import * as fs from 'fs';
+import * as path from 'path';
+
+export interface LoggerConfig {
+  logDir: string;
+  filename: string;
+  maxSizeBytes: number;
+  maxFiles: number;
 }
 
-export function validateConfig(config: unknown): config is ProcessingConfig {
-  return (
-    typeof config === 'object' &&
-    config !== null &&
-    'input' in config &&
-    typeof (config as ProcessingConfig).maxRetries === 'number' &&
-    typeof (config as ProcessingConfig).timeoutMs === 'number'
-  );
-}
+export class RotatingLogger {
+  private readonly logPath: string;
 
-export async function runProcessingLoop(configs: unknown[]): Promise<void> {
-  for (const rawConfig of configs) {
-    if (!validateConfig(rawConfig)) {
-      console.error('invalid configuration structure', rawConfig);
-      continue;
-    }
-
-    try {
-      await processItem(rawConfig);
-    } catch (err) {
-      console.error('processing failed for input', rawConfig.input, err);
+  constructor(private config: LoggerConfig) {
+    this.logPath = path.join(config.logDir, config.filename);
+    if (!fs.existsSync(config.logDir)) {
+      fs.mkdirSync(config.logDir, { recursive: true });
     }
   }
-}
 
-async function processItem(config: ProcessingConfig): Promise<void> {
-  if (config.timeoutMs < 0) throw new Error('invalid timeout');
-  // process logic here
+  public log(message: string): void {
+    this.rotate();
+    const entry = `${new Date().toISOString()} - ${message}\n`;
+    fs.appendFileSync(this.logPath, entry);
+  }
+
+  private rotate(): void {
+    if (!fs.existsSync(this.logPath)) return;
+
+    const stats = fs.statSync(this.logPath);
+    if (stats.size < this.config.maxSizeBytes) return;
+
+    for (let i = this.config.maxFiles - 1; i > 0; i--) {
+      const oldPath = `${this.logPath}.${i}`;
+      const newPath = `${this.logPath}.${i + 1}`;
+      if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
+    }
+    fs.renameSync(this.logPath, `${this.logPath}.1`);
+  }
 }
