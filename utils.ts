@@ -1,35 +1,36 @@
-export type DataMap = Record<string, unknown>;
+export function range(start: number, stop?: number, step = 1): number[] {
+  let actualStart = start;
+  let actualStop = stop;
 
-export const isObject = (item: unknown): item is DataMap => {
-  return typeof item === 'object' && item !== null && !Array.isArray(item);
-};
+  if (actualStop === undefined) {
+    actualStop = start;
+    actualStart = 0;
+  }
 
-export const deepClone = <T>(obj: T): T => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
-  const cloned = {} as T;
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      cloned[key] = deepClone(obj[key]);
+  if (!Number.isInteger(actualStart) || !Number.isInteger(actualStop) || !Number.isInteger(step)) {
+    throw new TypeError("range() arguments must be integers");
+  }
+
+  if (step === 0) {
+    throw new RangeError("range() arg 3 must not be zero");
+  }
+
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = actualStart; i < actualStop; i += step) {
+      result.push(i);
+      if (result.length > 1_000_000) {
+        throw new RangeError("range() result exceeds maximum limit of 1,000,000 elements");
+      }
+    }
+  } else {
+    for (let i = actualStart; i > actualStop; i += step) {
+      result.push(i);
+      if (result.length > 1_000_000) {
+        throw new RangeError("range() result exceeds maximum limit of 1,000,000 elements");
+      }
     }
   }
-  return cloned;
-};
 
-export const flattenObject = (obj: DataMap, prefix = ''): DataMap => {
-  return Object.keys(obj).reduce((acc: DataMap, key: string) => {
-    const newKey = prefix ? `${prefix}.${key}` : key;
-    if (isObject(obj[key] as unknown)) {
-      Object.assign(acc, flattenObject(obj[key] as DataMap, newKey));
-    } else {
-      acc[newKey] = obj[key];
-    }
-    return acc;
-  }, {});
-};
-
-export const sanitizeData = <T extends DataMap>(data: T, keys: string[]): Partial<T> => {
-  const sanitized = { ...data };
-  keys.forEach((key) => delete sanitized[key as keyof T]);
-  return sanitized;
-};
+  return result;
+}
