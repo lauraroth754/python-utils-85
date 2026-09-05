@@ -1,63 +1,33 @@
-export class LRUCache<K, V> {
-  private capacity: number;
-  private cache: Map<K, V>;
+export const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-  constructor(capacity: number = 100) {
-    this.capacity = capacity;
-    this.cache = new Map<K, V>();
-  }
+export const slugify = (text: string): string =>
+  text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-');
 
-  get(key: K): V | undefined {
-    if (!this.cache.has(key)) return undefined;
-    const value = this.cache.get(key)!;
-    this.cache.delete(key);
-    this.cache.set(key, value);
-    return value;
-  }
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey !== undefined) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(key, value);
-  }
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
 
-  clear(): void {
-    this.cache.clear();
-  }
-
-  get size(): number {
-    return this.cache.size;
-  }
-}
-
-export class PerformanceService {
-  private static caches = new Map<string, LRUCache<string, unknown>>();
-
-  static memoize<T extends (...args: any[]) => any>(
-    namespace: string,
-    fn: T,
-    capacity: number = 128
-  ): T {
-    if (!this.caches.has(namespace)) {
-      this.caches.set(namespace, new LRUCache(capacity));
-    }
-    const cache = this.caches.get(namespace)!;
-
-    return ((...args: Parameters<T>): ReturnType<T> => {
-      const key = JSON.stringify(args);
-      const cached = cache.get(key);
-      if (cached !== undefined) {
-        return cached as ReturnType<T>;
-      }
-      const result = fn(...args);
-      cache.set(key, result);
-      return result;
-    }) as T;
-  }
-}
+export const debounce = <T extends (...args: any[]) => any>(
+  fn: T,
+  ms: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), ms);
+  };
+};
