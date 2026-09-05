@@ -1,35 +1,35 @@
-export function range(start: number, stop?: number, step: number = 1): number[] {
-  if (step === 0) {
-    throw new Error("ValueError: range() arg 3 must not be zero");
-  }
+export type DataMap = Record<string, unknown>;
 
-  const actualStart = stop === undefined ? 0 : start;
-  const actualStop = stop === undefined ? start : stop;
+export const isObject = (item: unknown): item is DataMap => {
+  return typeof item === 'object' && item !== null && !Array.isArray(item);
+};
 
-  if (!Number.isInteger(actualStart) || !Number.isInteger(actualStop) || !Number.isInteger(step)) {
-    throw new TypeError("TypeError: range() integer arguments expected");
-  }
-
-  const result: number[] = [];
-  if (step > 0) {
-    for (let i = actualStart; i < actualStop; i += step) {
-      result.push(i);
-    }
-  } else {
-    for (let i = actualStart; i > actualStop; i += step) {
-      result.push(i);
+export const deepClone = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
+  const cloned = {} as T;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key]);
     }
   }
-  return result;
-}
+  return cloned;
+};
 
-export function safeIndex<T>(arr: T[], index: number, defaultValue: T | null = null): T | null {
-  if (!Array.isArray(arr)) {
-    throw new TypeError("TypeError: expected an array");
-  }
-  const resolvedIndex = index < 0 ? arr.length + index : index;
-  if (resolvedIndex < 0 || resolvedIndex >= arr.length) {
-    return defaultValue;
-  }
-  return arr[resolvedIndex];
-}
+export const flattenObject = (obj: DataMap, prefix = ''): DataMap => {
+  return Object.keys(obj).reduce((acc: DataMap, key: string) => {
+    const newKey = prefix ? `${prefix}.${key}` : key;
+    if (isObject(obj[key] as unknown)) {
+      Object.assign(acc, flattenObject(obj[key] as DataMap, newKey));
+    } else {
+      acc[newKey] = obj[key];
+    }
+    return acc;
+  }, {});
+};
+
+export const sanitizeData = <T extends DataMap>(data: T, keys: string[]): Partial<T> => {
+  const sanitized = { ...data };
+  keys.forEach((key) => delete sanitized[key as keyof T]);
+  return sanitized;
+};
