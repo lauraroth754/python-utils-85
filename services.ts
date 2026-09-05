@@ -1,33 +1,63 @@
-export const chunkArray = <T>(arr: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );
+import { spawn } from 'child_process';
+import { existsSync } from 'fs';
 
-export const slugify = (text: string): string =>
-  text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
+export interface ExecutionResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+}
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export class PythonExecutionService {
+  private pythonPath: string;
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
-  keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
+  constructor(pythonPath = 'python3') {
+    this.pythonPath = pythonPath;
+  }
 
-export const debounce = <T extends (...args: any[]) => any>(
-  fn: T,
-  ms: number
-): ((...args: Parameters<T>) => void) => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), ms);
-  };
-};
+  public async runScript(
+    scriptPath: string,
+    args: string[] = [],
+    timeoutMs = 5000
+  ): Promise<ExecutionResult> {
+    if (!scriptPath) {
+      throw new Error('Script path cannot be empty');
+    }
+
+    if (!existsSync(scriptPath)) {
+      throw new Error(`Script file not found: ${scriptPath}`);
+    }
+
+    return new Promise((resolve, reject) => {
+      const child = spawn(this.pythonPath, [scriptPath, ...args]);
+      let stdout = '';
+      let stderr = '';
+
+      const timer = setTimeout(() => {
+        child.kill('SIGTERM');
+        reject(new Error(`Execution timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(new Error(`Failed to start process: ${err.message}`));
+      });
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        resolve({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          exitCode: code,
+        });
+      });
+    });
+  }
+}
