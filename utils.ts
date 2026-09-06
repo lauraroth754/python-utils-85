@@ -1,36 +1,34 @@
-export function range(start: number, stop?: number, step = 1): number[] {
-  let actualStart = start;
-  let actualStop = stop;
+export type Processor<T> = (item: T) => T;
 
-  if (actualStop === undefined) {
-    actualStop = start;
-    actualStart = 0;
+export class BatchProcessor<T> {
+  private queue: T[] = [];
+  private readonly concurrencyLimit: number;
+
+  constructor(limit: number = 100) {
+    this.concurrencyLimit = limit;
   }
 
-  if (!Number.isInteger(actualStart) || !Number.isInteger(actualStop) || !Number.isInteger(step)) {
-    throw new TypeError("range() arguments must be integers");
+  public add(items: T[]): void {
+    this.queue.push(...items);
   }
 
-  if (step === 0) {
-    throw new RangeError("range() arg 3 must not be zero");
-  }
+  public process(fn: Processor<T>): T[] {
+    const results: T[] = [];
+    const batchSize = Math.min(this.queue.length, this.concurrencyLimit);
 
-  const result: number[] = [];
-  if (step > 0) {
-    for (let i = actualStart; i < actualStop; i += step) {
-      result.push(i);
-      if (result.length > 1_000_000) {
-        throw new RangeError("range() result exceeds maximum limit of 1,000,000 elements");
-      }
+    while (this.queue.length > 0) {
+      const chunk = this.queue.splice(0, batchSize);
+      results.push(...chunk.map(fn));
     }
-  } else {
-    for (let i = actualStart; i > actualStop; i += step) {
-      result.push(i);
-      if (result.length > 1_000_000) {
-        throw new RangeError("range() result exceeds maximum limit of 1,000,000 elements");
-      }
-    }
+
+    return results;
   }
 
-  return result;
+  public get pendingCount(): number {
+    return this.queue.length;
+  }
+
+  public clear(): void {
+    this.queue = [];
+  }
 }
