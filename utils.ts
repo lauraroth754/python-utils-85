@@ -1,37 +1,34 @@
-export type Processor = (input: string) => string;
+export type DataMap = Record<string, unknown>;
 
-/**
- * Truncates string to specified length and appends ellipsis
- */
-export function truncate(text: string, limit: number): string {
-  if (text.length <= limit) return text;
-  return text.substring(0, limit) + '...';
-}
+export const sanitize = (data: DataMap): DataMap => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== null && value !== undefined && value !== '') {
+      acc[key] = typeof value === 'object' && !Array.isArray(value) 
+        ? sanitize(value as DataMap) 
+        : value;
+    }
+    return acc;
+  }, {} as DataMap);
+};
 
-/**
- * Normalizes input string to slug format
- */
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
-}
+export const flatten = (obj: DataMap, prefix = ''): DataMap => {
+  return Object.keys(obj).reduce((acc, key) => {
+    const pre = prefix.length ? `${prefix}.` : '';
+    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+      Object.assign(acc, flatten(obj[key] as DataMap, pre + key));
+    } else {
+      acc[pre + key] = obj[key];
+    }
+    return acc;
+  }, {} as DataMap);
+};
 
-/**
- * Batches an array into smaller chunks
- */
-export function chunkArray<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-}
+export const pluck = <T, K extends keyof T>(list: T[], key: K): T[K][] => {
+  return list.map((item) => item[key]);
+};
 
-/**
- * Filters undefined values from collection
- */
-export function compact<T>(items: (T | null | undefined)[]): T[] {
-  return items.filter((item): item is T => item !== null && item !== undefined);
-}
+export const chunk = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
