@@ -1,34 +1,37 @@
-export type Processor<T> = (item: T) => T;
+export type Processor = (input: string) => string;
 
-export class BatchProcessor<T> {
-  private queue: T[] = [];
-  private readonly concurrencyLimit: number;
+/**
+ * Truncates string to specified length and appends ellipsis
+ */
+export function truncate(text: string, limit: number): string {
+  if (text.length <= limit) return text;
+  return text.substring(0, limit) + '...';
+}
 
-  constructor(limit: number = 100) {
-    this.concurrencyLimit = limit;
+/**
+ * Normalizes input string to slug format
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+
+/**
+ * Batches an array into smaller chunks
+ */
+export function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
   }
+  return chunks;
+}
 
-  public add(items: T[]): void {
-    this.queue.push(...items);
-  }
-
-  public process(fn: Processor<T>): T[] {
-    const results: T[] = [];
-    const batchSize = Math.min(this.queue.length, this.concurrencyLimit);
-
-    while (this.queue.length > 0) {
-      const chunk = this.queue.splice(0, batchSize);
-      results.push(...chunk.map(fn));
-    }
-
-    return results;
-  }
-
-  public get pendingCount(): number {
-    return this.queue.length;
-  }
-
-  public clear(): void {
-    this.queue = [];
-  }
+/**
+ * Filters undefined values from collection
+ */
+export function compact<T>(items: (T | null | undefined)[]): T[] {
+  return items.filter((item): item is T => item !== null && item !== undefined);
 }
