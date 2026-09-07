@@ -5,34 +5,36 @@ export class PythonUtilsError extends Error {
   }
 }
 
-export const validateConfig = (config: Record<string, any>): void => {
-  if (!config || typeof config !== 'object') {
-    throw new PythonUtilsError('invalid configuration object', 'ERR_INVALID_CONFIG');
-  }
-
-  if (config.timeout !== undefined && (typeof config.timeout !== 'number' || config.timeout < 0)) {
-    throw new PythonUtilsError('timeout must be a non-negative number', 'ERR_INVALID_TIMEOUT');
-  }
-};
-
-export const safeParse = <T>(json: string): T | null => {
+export const safeExecute = <T>(fn: () => T, errorCode: string): T => {
   try {
-    return JSON.parse(json) as T;
-  } catch {
-    return null;
-  }
-};
-
-export const retryOperation = async <T>(
-  fn: () => Promise<T>,
-  retries: number = 3
-): Promise<T> => {
-  try {
-    return await fn();
+    return fn();
   } catch (error) {
-    if (retries > 0) {
-      return await retryOperation(fn, retries - 1);
+    throw new PythonUtilsError(
+      error instanceof Error ? error.message : 'Unknown execution failure',
+      errorCode
+    );
+  }
+};
+
+export const validateConfig = (config: Record<string, unknown>): void => {
+  if (!config || typeof config !== 'object') {
+    throw new PythonUtilsError('Invalid configuration object', 'ERR_INVALID_CONFIG');
+  }
+
+  for (const [key, value] of Object.entries(config)) {
+    if (value === undefined || value === null) {
+      throw new PythonUtilsError(`Missing value for key: ${key}`, 'ERR_MISSING_VALUE');
     }
-    throw error;
+  }
+};
+
+export const parsePythonOutput = (data: string): Record<string, any> => {
+  if (!data.trim()) {
+    throw new PythonUtilsError('Empty payload from python process', 'ERR_EMPTY_RESPONSE');
+  }
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    throw new PythonUtilsError('Malformed json from python', 'ERR_PARSE_FAILURE');
   }
 };
