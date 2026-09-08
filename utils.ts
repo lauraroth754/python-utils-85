@@ -1,40 +1,43 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
-}
+export type DataMap<T = unknown> = Record<string, T>;
 
-export const safeExecute = <T>(fn: () => T, errorCode: string): T => {
-  try {
-    return fn();
-  } catch (error) {
-    throw new PythonUtilsError(
-      error instanceof Error ? error.message : 'Unknown execution failure',
-      errorCode
-    );
-  }
-};
-
-export const validateConfig = (config: Record<string, unknown>): void => {
-  if (!config || typeof config !== 'object') {
-    throw new PythonUtilsError('Invalid configuration object', 'ERR_INVALID_CONFIG');
-  }
-
-  for (const [key, value] of Object.entries(config)) {
-    if (value === undefined || value === null) {
-      throw new PythonUtilsError(`Missing value for key: ${key}`, 'ERR_MISSING_VALUE');
+export const deepClone = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
+  const cloned = {} as T;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key]);
     }
   }
+  return cloned;
 };
 
-export const parsePythonOutput = (data: string): Record<string, any> => {
-  if (!data.trim()) {
-    throw new PythonUtilsError('Empty payload from python process', 'ERR_EMPTY_RESPONSE');
-  }
-  try {
-    return JSON.parse(data);
-  } catch (e) {
-    throw new PythonUtilsError('Malformed json from python', 'ERR_PARSE_FAILURE');
-  }
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  const result = {} as Pick<T, K>;
+  keys.forEach((key) => {
+    if (key in obj) result[key] = obj[key];
+  });
+  return result;
+};
+
+export const omit = <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+  const result = { ...obj };
+  keys.forEach((key) => delete result[key]);
+  return result;
+};
+
+export const isDefined = <T>(value: T | null | undefined): value is T => {
+  return value !== null && value !== undefined;
+};
+
+export const flattenObject = (obj: DataMap, prefix = ''): DataMap => {
+  return Object.keys(obj).reduce((acc, k) => {
+    const pre = prefix.length ? `${prefix}.` : '';
+    if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+      Object.assign(acc, flattenObject(obj[k] as DataMap, pre + k));
+    } else {
+      acc[pre + k] = obj[k];
+    }
+    return acc;
+  }, {} as DataMap);
 };
