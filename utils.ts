@@ -1,43 +1,30 @@
-export type DataMap<T = unknown> = Record<string, T>;
-
-export const deepClone = <T>(obj: T): T => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
-  const cloned = {} as T;
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      cloned[key] = deepClone(obj[key]);
-    }
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-  return cloned;
-};
-
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) result[key] = obj[key];
-  });
+  const result: number[] = [];
+  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
+    result.push(i);
+  }
   return result;
-};
+}
 
-export const omit = <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
-  const result = { ...obj };
-  keys.forEach((key) => delete result[key]);
+export function zip<T>(...arrays: T[][]): T[][] {
+  if (arrays.length === 0) return [];
+  const minLength = Math.min(...arrays.map(arr => arr.length));
+  const result: T[][] = [];
+  for (let i = 0; i < minLength; i++) {
+    result.push(arrays.map(arr => arr[i]));
+  }
   return result;
-};
+}
 
-export const isDefined = <T>(value: T | null | undefined): value is T => {
-  return value !== null && value !== undefined;
-};
-
-export const flattenObject = (obj: DataMap, prefix = ''): DataMap => {
-  return Object.keys(obj).reduce((acc, k) => {
-    const pre = prefix.length ? `${prefix}.` : '';
-    if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-      Object.assign(acc, flattenObject(obj[k] as DataMap, pre + k));
-    } else {
-      acc[pre + k] = obj[k];
-    }
-    return acc;
-  }, {} as DataMap);
-};
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
