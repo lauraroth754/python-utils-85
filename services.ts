@@ -1,63 +1,68 @@
-import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import * as fs from 'fs';
+import * as path from 'path';
 
-export interface ExecutionResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
+export interface LoggerConfig {
+  filepath: string;
+  maxBytes: number;
+  backupCount: number;
 }
 
-export class PythonExecutionService {
-  private pythonPath: string;
+export class RotatingLogger {
+  private filepath: string;
+  private maxBytes: number;
+  private backupCount: number;
+  private stream!: fs.WriteStream;
 
-  constructor(pythonPath = 'python3') {
-    this.pythonPath = pythonPath;
+  constructor(config: LoggerConfig) {
+    this.filepath = path.resolve(config.filepath);
+    this.maxBytes = config.maxBytes;
+    this.backupCount = config.backupCount;
+    this.initStream();
   }
 
-  public async runScript(
-    scriptPath: string,
-    args: string[] = [],
-    timeoutMs = 5000
-  ): Promise<ExecutionResult> {
-    if (!scriptPath) {
-      throw new Error('Script path cannot be empty');
+  private initStream(): void {
+    const dir = path.dirname(this.filepath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    this.stream = fs.createWriteStream(this.filepath, { flags: 'a', encoding: 'utf8' });
+  }
+
+  private rotate(): void {
+    this.stream.end();
+
+    for (let i = this.backupCount - 1; i >= 1; i--) {
+      const oldPath = `${this.filepath}.${i}`;
+      const newPath = `${this.filepath}.${i + 1}`;
+      if (fs.existsSync(oldPath)) {
+        fs.renameSync(oldPath, newPath);
+      }
     }
 
-    if (!existsSync(scriptPath)) {
-      throw new Error(`Script file not found: ${scriptPath}`);
+    if (fs.existsSync(this.filepath)) {
+      fs.renameSync(this.filepath, `${this.filepath}.1`);
     }
 
-    return new Promise((resolve, reject) => {
-      const child = spawn(this.pythonPath, [scriptPath, ...args]);
-      let stdout = '';
-      let stderr = '';
+    this.initStream();
+  }
 
-      const timer = setTimeout(() => {
-        child.kill('SIGTERM');
-        reject(new Error(`Execution timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
+  public log(message: string, level: string = 'INFO'): void {
+    const timestamp = new Date().toISOString();
+    const formatted = `[${timestamp}] [${level}] ${message}
+`;
+    const entryBytes = Buffer.byteLength(formatted, 'utf8');
 
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+    try {
+      if (fs.existsSync(this.filepath)) {
+        const stats = fs.statSync(this.filepath);
+        if (stats.size + entryBytes > this.maxBytes) {
+          this.rotate();
+        }
+      }
+    } catch {
+      this.initStream();
+    }
 
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      child.on('error', (err) => {
-        clearTimeout(timer);
-        reject(new Error(`Failed to start process: ${err.message}`));
-      });
-
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        resolve({
-          stdout: stdout.trim(),
-          stderr: stderr.trim(),
-          exitCode: code,
-        });
-      });
-    });
+    this.stream.write(formatted);
   }
 }
