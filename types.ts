@@ -1,30 +1,34 @@
-export interface ProcessResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
+export interface PythonProcessResult {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number;
 }
 
 export interface ExecutionOptions {
-  timeout?: number;
-  cwd?: string;
-  env?: Record<string, string>;
+  readonly timeout?: number;
+  readonly env?: Record<string, string>;
+  readonly cwd?: string;
 }
 
-export type PythonVersion = '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
-
-export interface EnvironmentConfig {
-  venvPath: string;
-  pythonExecutable: string;
-  version: PythonVersion;
+export interface PythonModuleConfig {
+  readonly name: string;
+  readonly version: string;
+  readonly dependencies: ReadonlyArray<string>;
 }
 
-export interface RegistryMap {
-  [key: string]: string | number | boolean;
+export type PythonRuntime = 'python3' | 'pypy3' | 'python3.11';
+
+/**
+ * Orchestrates external python process lifecycle
+ */
+export interface IProcessManager {
+  execute(command: string, options?: ExecutionOptions): Promise<PythonProcessResult>;
+  validateRuntime(runtime: PythonRuntime): Promise<boolean>;
 }
 
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code?: string) {
+export class PythonRuntimeError extends Error {
+  constructor(public readonly code: number, message: string) {
     super(message);
-    this.name = 'PythonUtilsError';
+    this.name = 'PythonRuntimeError';
   }
 }
