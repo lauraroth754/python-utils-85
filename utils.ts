@@ -1,30 +1,23 @@
-export function range(start: number, stop?: number, step: number = 1): number[] {
-  if (stop === undefined) {
-    stop = start;
-    start = 0;
-  }
-  const result: number[] = [];
-  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
-    result.push(i);
-  }
-  return result;
-}
+import { createLogger, format, transports, Logger } from 'winston';
+import 'winston-daily-rotate-file';
 
-export function zip<T>(...arrays: T[][]): T[][] {
-  if (arrays.length === 0) return [];
-  const minLength = Math.min(...arrays.map(arr => arr.length));
-  const result: T[][] = [];
-  for (let i = 0; i < minLength; i++) {
-    result.push(arrays.map(arr => arr[i]));
-  }
-  return result;
-}
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.errors({ stack: true }),
+  format.json()
+);
 
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
+export const logger: Logger = createLogger({
+  level: 'info',
+  format: logFormat,
+  transports: [
+    new transports.Console(),
+    new transports.DailyRotateFile({
+      filename: 'logs/application-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d'
+    })
+  ]
+});
