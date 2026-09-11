@@ -1,38 +1,44 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (step === 0) {
+    throw new Error("step argument must not be zero");
   }
+
+  let actualStart = start;
+  let actualStop = stop;
+
+  if (actualStop === undefined) {
+    actualStop = start;
+    actualStart = 0;
+  }
+
+  if ((step > 0 && actualStart > actualStop) || (step < 0 && actualStart < actualStop)) {
+    return [];
+  }
+
+  const totalSteps = Math.ceil((actualStop - actualStart) / step);
+  if (totalSteps <= 0 || !isFinite(totalSteps)) {
+    return [];
+  }
+
+  const result: number[] = [];
+  for (let i = 0; i < totalSteps; i++) {
+    result.push(actualStart + i * step);
+  }
+
+  return result;
 }
 
-export const safeExecute = <T>(fn: () => T, errorMessage: string): T => {
-  try {
-    return fn();
-  } catch (error) {
-    throw new PythonUtilsError(errorMessage, 'EXECUTION_FAILURE');
+export function chunk<T>(arr: T[], size: number): T[][] {
+  if (!Array.isArray(arr)) {
+    throw new TypeError("Expected an array for chunking");
   }
-};
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new RangeError("Chunk size must be a positive integer");
+  }
 
-export const validateInput = (data: unknown): boolean => {
-  if (data === null || data === undefined) {
-    throw new PythonUtilsError('Input cannot be null or undefined', 'INVALID_INPUT');
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
   }
-  return true;
-};
-
-export const parseJsonSafely = <T>(json: string): T => {
-  try {
-    return JSON.parse(json) as T;
-  } catch (e) {
-    throw new PythonUtilsError('Failed to parse JSON string', 'PARSE_ERROR');
-  }
-};
-
-export const handleAsync = async <T>(promise: Promise<T>): Promise<[T | null, Error | null]> => {
-  try {
-    const data = await promise;
-    return [data, null];
-  } catch (error) {
-    return [null, error instanceof Error ? error : new Error('Unknown error')];
-  }
-};
+  return chunks;
+}
