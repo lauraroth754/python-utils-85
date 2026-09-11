@@ -1,41 +1,23 @@
-export class ConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigError';
-  }
+export interface AppConfig {
+  host: string;
+  port: number;
+  debug: boolean;
 }
 
-export function parseEnvConfig(rawConfig: string): Record<string, string> {
-  const result: Record<string, string> = Object.create(null);
-  if (!rawConfig) {
-    return result;
-  }
+const defaults: AppConfig = {
+  host: 'localhost',
+  port: 8080,
+  debug: false,
+};
 
-  const lines = rawConfig.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line.startsWith('#')) {
-      continue;
-    }
+export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
+  return { ...defaults, ...overrides };
+}
 
-    const equalSignIndex = line.indexOf('=');
-    if (equalSignIndex === -1) {
-      throw new ConfigError(`Invalid line format at line ${i + 1}: Missing '=' delimiter`);
-    }
-
-    const key = line.slice(0, equalSignIndex).trim();
-    const value = line.slice(equalSignIndex + 1).trim();
-
-    if (!key) {
-      throw new ConfigError(`Invalid line format at line ${i + 1}: Empty key`);
-    }
-
-    if (key === '__proto__' || key === 'constructor') {
-      throw new ConfigError(`Security error at line ${i + 1}: Restricted property usage`);
-    }
-
-    result[key] = value;
-  }
-
-  return result;
+export function loadConfigFromEnv(): AppConfig {
+  return {
+    host: process.env.APP_HOST || defaults.host,
+    port: parseInt(process.env.APP_PORT || '', 10) || defaults.port,
+    debug: process.env.APP_DEBUG === 'true' || defaults.debug,
+  };
 }
