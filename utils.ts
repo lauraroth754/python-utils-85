@@ -1,41 +1,34 @@
-export type Processor = <T>(data: T) => T;
+export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
-export class MemoizedExecutor {
-  private cache: Map<string, any> = new Map();
+export const delay = (ms: number): Promise<void> => 
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-  execute<T>(key: string, task: () => T, ttl: number = 5000): T {
-    if (this.cache.has(key)) {
-      const entry = this.cache.get(key);
-      if (Date.now() - entry.timestamp < ttl) {
-        return entry.value;
-      }
-    }
+export const deepClone = <T>(obj: T): T => 
+  JSON.parse(JSON.stringify(obj));
 
-    const value = task();
-    this.cache.set(key, { value, timestamp: Date.now() });
-    return value;
+export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> =>
+  array.reduce((acc, item) => {
+    const group = String(item[key]);
+    (acc[group] = acc[group] || []).push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
+
+export const clamp = (val: number, min: number, max: number): number => 
+  Math.min(Math.max(val, min), max);
+
+export const isDefined = <T>(value: T | null | undefined): value is T => 
+  value !== null && value !== undefined;
+
+export const retry = async <T>(
+  fn: () => Promise<T>,
+  retries: number = 3,
+  backoff: number = 1000
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) throw error;
+    await delay(backoff);
+    return retry(fn, retries - 1, backoff * 2);
   }
-
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-export const batchProcess = <T>(items: T[], chunkSize: number): T[][] => {
-  const result: T[][] = [];
-  for (let i = 0; i < items.length; i += chunkSize) {
-    result.push(items.slice(i, i + chunkSize));
-  }
-  return result;
-};
-
-export const throttle = (fn: Function, delay: number) => {
-  let last = 0;
-  return (...args: any[]) => {
-    const now = Date.now();
-    if (now - last >= delay) {
-      last = now;
-      fn(...args);
-    }
-  };
 };
