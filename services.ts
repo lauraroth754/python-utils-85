@@ -1,66 +1,30 @@
-import { spawn } from 'child_process';
+export type DataEntry = { id: string; value: number };
 
-export interface ExecutionResult {
-  stdout: string;
-  stderr: string;
-  exitCode: number | null;
-}
+export class Processor {
+  private cache: Map<string, number> = new Map();
 
-export interface ExecutionOptions {
-  timeoutMs?: number;
-  pythonPath?: string;
-}
-
-export class PythonExecutorService {
-  private defaultPythonPath: string;
-
-  constructor(pythonPath = 'python3') {
-    this.defaultPythonPath = pythonPath;
+  public processBatch(data: DataEntry[]): number[] {
+    return data.map((entry) => this.compute(entry));
   }
 
-  public async executeCode(code: string, options: ExecutionOptions = {}): Promise<ExecutionResult> {
-    if (!code || !code.trim()) {
-      throw new Error('Execution failed: Empty Python code provided');
+  private compute(entry: DataEntry): number {
+    if (this.cache.has(entry.id)) {
+      return this.cache.get(entry.id)!;
     }
+    const result = this.heavyCalculation(entry.value);
+    this.cache.set(entry.id, result);
+    return result;
+  }
 
-    const pythonPath = options.pythonPath || this.defaultPythonPath;
-    const timeout = options.timeoutMs || 5000;
+  private heavyCalculation(val: number): number {
+    let res = val;
+    for (let i = 0; i < 1e3; i++) {
+      res = Math.sqrt(res + i) * Math.sin(res);
+    }
+    return res;
+  }
 
-    return new Promise((resolve, reject) => {
-      const child = spawn(pythonPath, ['-c', code]);
-      let stdout = '';
-      let stderr = '';
-      let isTimedOut = false;
-
-      const timer = setTimeout(() => {
-        isTimedOut = true;
-        child.kill('SIGKILL');
-        reject(new Error(`Execution timed out after ${timeout}ms`));
-      }, timeout);
-
-      child.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      child.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      child.on('error', (err) => {
-        clearTimeout(timer);
-        reject(new Error(`Failed to start Python process: ${err.message}`));
-      });
-
-      child.on('close', (code) => {
-        if (isTimedOut) return;
-        clearTimeout(timer);
-
-        resolve({
-          stdout: stdout.trim(),
-          stderr: stderr.trim(),
-          exitCode: code,
-        });
-      });
-    });
+  public clearCache(): void {
+    this.cache.clear();
   }
 }
