@@ -1,34 +1,33 @@
-export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+interface ProcessingResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+}
 
-export const delay = (ms: number): Promise<void> => 
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const validateInput = (input: unknown): input is Record<string, any> => {
+  return typeof input === 'object' && input !== null && 'id' in input;
+};
 
-export const deepClone = <T>(obj: T): T => 
-  JSON.parse(JSON.stringify(obj));
+export const processData = (items: unknown[]): ProcessingResult[] => {
+  return items.map((item) => {
+    if (!validateInput(item)) {
+      return { success: false, error: 'invalid input format' };
+    }
 
-export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> =>
-  array.reduce((acc, item) => {
-    const group = String(item[key]);
-    (acc[group] = acc[group] || []).push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
+    try {
+      const result = { ...item, processedAt: Date.now() };
+      return { success: true, data: result };
+    } catch (e) {
+      return { success: false, error: (e as Error).message };
+    }
+  });
+};
 
-export const clamp = (val: number, min: number, max: number): number => 
-  Math.min(Math.max(val, min), max);
-
-export const isDefined = <T>(value: T | null | undefined): value is T => 
-  value !== null && value !== undefined;
-
-export const retry = async <T>(
-  fn: () => Promise<T>,
-  retries: number = 3,
-  backoff: number = 1000
-): Promise<T> => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries <= 0) throw error;
-    await delay(backoff);
-    return retry(fn, retries - 1, backoff * 2);
-  }
+export const runMainLoop = (payloads: unknown[]): void => {
+  const results = processData(payloads);
+  results.forEach((res) => {
+    if (!res.success) {
+      console.error(`Processing error: ${res.error}`);
+    }
+  });
 };
