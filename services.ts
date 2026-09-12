@@ -1,68 +1,66 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import { spawn } from 'child_process';
 
-export interface LoggerConfig {
-  filepath: string;
-  maxBytes: number;
-  backupCount: number;
+export interface ExecutionResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
 }
 
-export class RotatingLogger {
-  private filepath: string;
-  private maxBytes: number;
-  private backupCount: number;
-  private stream!: fs.WriteStream;
+export interface ExecutionOptions {
+  timeoutMs?: number;
+  pythonPath?: string;
+}
 
-  constructor(config: LoggerConfig) {
-    this.filepath = path.resolve(config.filepath);
-    this.maxBytes = config.maxBytes;
-    this.backupCount = config.backupCount;
-    this.initStream();
+export class PythonExecutorService {
+  private defaultPythonPath: string;
+
+  constructor(pythonPath = 'python3') {
+    this.defaultPythonPath = pythonPath;
   }
 
-  private initStream(): void {
-    const dir = path.dirname(this.filepath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    this.stream = fs.createWriteStream(this.filepath, { flags: 'a', encoding: 'utf8' });
-  }
-
-  private rotate(): void {
-    this.stream.end();
-
-    for (let i = this.backupCount - 1; i >= 1; i--) {
-      const oldPath = `${this.filepath}.${i}`;
-      const newPath = `${this.filepath}.${i + 1}`;
-      if (fs.existsSync(oldPath)) {
-        fs.renameSync(oldPath, newPath);
-      }
+  public async executeCode(code: string, options: ExecutionOptions = {}): Promise<ExecutionResult> {
+    if (!code || !code.trim()) {
+      throw new Error('Execution failed: Empty Python code provided');
     }
 
-    if (fs.existsSync(this.filepath)) {
-      fs.renameSync(this.filepath, `${this.filepath}.1`);
-    }
+    const pythonPath = options.pythonPath || this.defaultPythonPath;
+    const timeout = options.timeoutMs || 5000;
 
-    this.initStream();
-  }
+    return new Promise((resolve, reject) => {
+      const child = spawn(pythonPath, ['-c', code]);
+      let stdout = '';
+      let stderr = '';
+      let isTimedOut = false;
 
-  public log(message: string, level: string = 'INFO'): void {
-    const timestamp = new Date().toISOString();
-    const formatted = `[${timestamp}] [${level}] ${message}
-`;
-    const entryBytes = Buffer.byteLength(formatted, 'utf8');
+      const timer = setTimeout(() => {
+        isTimedOut = true;
+        child.kill('SIGKILL');
+        reject(new Error(`Execution timed out after ${timeout}ms`));
+      }, timeout);
 
-    try {
-      if (fs.existsSync(this.filepath)) {
-        const stats = fs.statSync(this.filepath);
-        if (stats.size + entryBytes > this.maxBytes) {
-          this.rotate();
-        }
-      }
-    } catch {
-      this.initStream();
-    }
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
 
-    this.stream.write(formatted);
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('error', (err) => {
+        clearTimeout(timer);
+        reject(new Error(`Failed to start Python process: ${err.message}`));
+      });
+
+      child.on('close', (code) => {
+        if (isTimedOut) return;
+        clearTimeout(timer);
+
+        resolve({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          exitCode: code,
+        });
+      });
+    });
   }
 }
