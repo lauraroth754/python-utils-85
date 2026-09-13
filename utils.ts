@@ -1,33 +1,39 @@
-interface ProcessingResult {
+export interface ProcessResult {
   success: boolean;
-  data?: any;
-  error?: string;
+  duration: number;
+  output: string | null;
 }
 
-export const validateInput = (input: unknown): input is Record<string, any> => {
-  return typeof input === 'object' && input !== null && 'id' in input;
-};
+export class PerformanceCache {
+  private cache: Map<string, ProcessResult> = new Map();
+  private readonly limit: number = 1000;
 
-export const processData = (items: unknown[]): ProcessingResult[] => {
-  return items.map((item) => {
-    if (!validateInput(item)) {
-      return { success: false, error: 'invalid input format' };
-    }
+  public get(key: string): ProcessResult | undefined {
+    return this.cache.get(key);
+  }
 
-    try {
-      const result = { ...item, processedAt: Date.now() };
-      return { success: true, data: result };
-    } catch (e) {
-      return { success: false, error: (e as Error).message };
+  public set(key: string, value: ProcessResult): void {
+    if (this.cache.size >= this.limit) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
     }
-  });
-};
+    this.cache.set(key, value);
+  }
 
-export const runMainLoop = (payloads: unknown[]): void => {
-  const results = processData(payloads);
-  results.forEach((res) => {
-    if (!res.success) {
-      console.error(`Processing error: ${res.error}`);
-    }
-  });
+  public clear(): void {
+    this.cache.clear();
+  }
+}
+
+export const memoize = <T extends (...args: any[]) => any>(fn: T) => {
+  const cache = new PerformanceCache();
+  return (...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    const cached = cache.get(key);
+    if (cached) return cached as ReturnType<T>;
+    
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  };
 };
