@@ -1,34 +1,34 @@
-export type DataTransformer<T, R> = (data: T) => R;
+import * as fs from 'fs';
+import * as path from 'path';
 
-export const deepClone = <T>(obj: T): T => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone) as any;
-  return Object.fromEntries(
-    Object.entries(obj).map(([key, value]) => [key, deepClone(value)])
-  ) as T;
-};
+interface LoggerConfig {
+  filePath: string;
+  maxSizeBytes: number;
+  maxFiles: number;
+}
 
-export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> =>
-  array.reduce((acc, item) => {
-    const group = String(item[key]);
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
+export const setupLogger = (config: LoggerConfig): (message: string) => void => {
+  const rotate = (): void => {
+    if (fs.existsSync(config.filePath) && fs.statSync(config.filePath).size > config.maxSizeBytes) {
+      for (let i = config.maxFiles - 1; i > 0; i--) {
+        const oldPath = `${config.filePath}.${i}`;
+        const newPath = `${config.filePath}.${i + 1}`;
+        if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
+      }
+      fs.renameSync(config.filePath, `${config.filePath}.1`);
+    }
+  };
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
-  keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
-
-export const debounce = <F extends (...args: any[]) => void>(
-  fn: F,
-  delay: number
-): ((...args: Parameters<F>) => void) => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
+  return (message: string): void => {
+    rotate();
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] ${message}\n`;
+    fs.appendFileSync(config.filePath, entry);
   };
 };
+
+export const logger = setupLogger({
+  filePath: path.join(process.cwd(), 'app.log'),
+  maxSizeBytes: 1024 * 1024 * 5,
+  maxFiles: 3
+});
