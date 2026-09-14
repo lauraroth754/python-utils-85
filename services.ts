@@ -1,30 +1,28 @@
-export type DataEntry = { id: string; value: number };
+export type DataMap = Record<string, unknown>;
 
-export class Processor {
-  private cache: Map<string, number> = new Map();
-
-  public processBatch(data: DataEntry[]): number[] {
-    return data.map((entry) => this.compute(entry));
-  }
-
-  private compute(entry: DataEntry): number {
-    if (this.cache.has(entry.id)) {
-      return this.cache.get(entry.id)!;
+export const sanitizeData = (data: DataMap): DataMap => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null) {
+      acc[key] = typeof value === 'object' ? sanitizeData(value as DataMap) : value;
     }
-    const result = this.heavyCalculation(entry.value);
-    this.cache.set(entry.id, result);
-    return result;
-  }
+    return acc;
+  }, {} as DataMap);
+};
 
-  private heavyCalculation(val: number): number {
-    let res = val;
-    for (let i = 0; i < 1e3; i++) {
-      res = Math.sqrt(res + i) * Math.sin(res);
-    }
-    return res;
-  }
+export const transformKeys = (data: DataMap, transform: (key: string) => string): DataMap => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const newKey = transform(key);
+    acc[newKey] = value;
+    return acc;
+  }, {} as DataMap);
+};
 
-  public clearCache(): void {
-    this.cache.clear();
-  }
-}
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
+
+export const validateSchema = (data: DataMap, keys: string[]): boolean => {
+  return keys.every((key) => Object.prototype.hasOwnProperty.call(data, key));
+};
