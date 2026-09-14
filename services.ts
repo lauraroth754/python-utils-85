@@ -1,28 +1,32 @@
-export type DataMap = Record<string, unknown>;
+export class ServiceError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'ServiceError';
+  }
+}
 
-export const sanitizeData = (data: DataMap): DataMap => {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null) {
-      acc[key] = typeof value === 'object' ? sanitizeData(value as DataMap) : value;
-    }
-    return acc;
-  }, {} as DataMap);
+export interface Result<T> {
+  data: T | null;
+  error: ServiceError | null;
+}
+
+export const safeExecute = async <T>(
+  task: () => Promise<T>
+): Promise<Result<T>> => {
+  try {
+    const data = await task();
+    return { data, error: null };
+  } catch (err) {
+    const error = err instanceof Error 
+      ? new ServiceError(err.message, 'EXECUTION_FAILURE')
+      : new ServiceError('Unknown internal error', 'UNKNOWN_ERROR');
+    return { data: null, error };
+  }
 };
 
-export const transformKeys = (data: DataMap, transform: (key: string) => string): DataMap => {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    const newKey = transform(key);
-    acc[newKey] = value;
-    return acc;
-  }, {} as DataMap);
-};
-
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
-
-export const validateSchema = (data: DataMap, keys: string[]): boolean => {
-  return keys.every((key) => Object.prototype.hasOwnProperty.call(data, key));
+export const validateResponse = <T>(data: T | null): T => {
+  if (data === null) {
+    throw new ServiceError('Operation returned null result', 'NULL_RESULT');
+  }
+  return data;
 };
