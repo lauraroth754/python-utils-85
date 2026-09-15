@@ -1,34 +1,22 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-interface LoggerConfig {
-  filePath: string;
-  maxSizeBytes: number;
-  maxFiles: number;
+export interface RetryOptions {
+  maxRetries?: number;
+  delayMs?: number;
 }
 
-export const setupLogger = (config: LoggerConfig): (message: string) => void => {
-  const rotate = (): void => {
-    if (fs.existsSync(config.filePath) && fs.statSync(config.filePath).size > config.maxSizeBytes) {
-      for (let i = config.maxFiles - 1; i > 0; i--) {
-        const oldPath = `${config.filePath}.${i}`;
-        const newPath = `${config.filePath}.${i + 1}`;
-        if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  { maxRetries = 3, delayMs = 1000 }: RetryOptions = {}
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
-      fs.renameSync(config.filePath, `${config.filePath}.1`);
     }
-  };
-
-  return (message: string): void => {
-    rotate();
-    const timestamp = new Date().toISOString();
-    const entry = `[${timestamp}] ${message}\n`;
-    fs.appendFileSync(config.filePath, entry);
-  };
-};
-
-export const logger = setupLogger({
-  filePath: path.join(process.cwd(), 'app.log'),
-  maxSizeBytes: 1024 * 1024 * 5,
-  maxFiles: 3
-});
+  }
+  throw lastError;
+}
