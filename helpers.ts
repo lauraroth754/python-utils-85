@@ -1,31 +1,44 @@
-import * as fs from 'fs';
-
-export interface Config {
-  [key: string]: any;
-}
-
-export class ConfigLoader {
-  private config: Config;
-
-  constructor(defaults: Config = {}) {
-    this.config = { ...defaults };
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-
-  public loadFromFile(filePath: string): void {
-    try {
-      const raw = fs.readFileSync(filePath, 'utf8');
-      const parsed = JSON.parse(raw);
-      this.config = { ...this.config, ...parsed };
-    } catch (error) {
-      console.error(`Failed to load config from ${filePath}:`, error);
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else if (step < 0) {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
     }
   }
+  return result;
+}
 
-  public get<T>(key: string, fallback?: T): T {
-    return this.config.hasOwnProperty(key) ? this.config[key] : fallback!;
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
+  const minLen = Math.min(arr1.length, arr2.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < minLen; i++) {
+    result.push([arr1[i], arr2[i]]);
   }
+  return result;
+}
 
-  public getAll(): Config {
-    return { ...this.config };
+export function enumerate<T>(iterable: Iterable<T>, start = 0): [number, T][] {
+  const result: [number, T][] = [];
+  let index = start;
+  for (const item of iterable) {
+    result.push([index++, item]);
   }
+  return result;
+}
+
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
 }
