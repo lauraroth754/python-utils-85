@@ -1,25 +1,24 @@
 export interface AppConfig {
-  port: number;
   host: string;
+  port: number;
   debug: boolean;
 }
 
 const defaults: AppConfig = {
-  port: 3000,
   host: 'localhost',
+  port: 8080,
   debug: false,
 };
 
-export class ConfigLoader {
-  public static load(overrides: Partial<AppConfig> = {}): AppConfig {
-    return { ...defaults, ...overrides };
-  }
+export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
+  ...defaults,
+  ...overrides,
+});
 
-  public static fromEnv(): AppConfig {
-    return {
-      port: parseInt(process.env.PORT || '') || defaults.port,
-      host: process.env.HOST || defaults.host,
-      debug: process.env.DEBUG === 'true',
-    };
-  }
-}
+export const getEnvConfig = (): AppConfig => {
+  return loadConfig({
+    host: process.env.APP_HOST,
+    port: process.env.APP_PORT ? parseInt(process.env.APP_PORT, 10) : undefined,
+    debug: process.env.APP_DEBUG === 'true',
+  } as Partial<AppConfig>);
+};
