@@ -1,22 +1,33 @@
 export interface RetryOptions {
   maxRetries?: number;
-  delayMs?: number;
+  delay?: number;
+  backoffFactor?: number;
+  retryCondition?: (error: unknown) => boolean;
 }
 
-export async function withRetry<T>(
+export async function retry<T>(
   fn: () => Promise<T>,
-  { maxRetries = 3, delayMs = 1000 }: RetryOptions = {}
+  options: RetryOptions = {}
 ): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+  const {
+    maxRetries = 3,
+    delay = 1000,
+    backoffFactor = 2,
+    retryCondition = () => true,
+  } = options;
+
+  let currentDelay = delay;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt < maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+    } catch (error) {
+      if (attempt === maxRetries || !retryCondition(error)) {
+        throw error;
       }
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay *= backoffFactor;
     }
   }
-  throw lastError;
+  throw new Error("Retry execution failed");
 }
