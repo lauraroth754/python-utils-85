@@ -1,32 +1,60 @@
-export interface ProcessTask {
+export interface ProcessingItem {
   id: string;
   payload: Record<string, unknown>;
-  retries: number;
+  priority?: number;
 }
 
-export const validateTask = (task: unknown): task is ProcessTask => {
-  if (!task || typeof task !== 'object') return false;
-  const t = task as Record<string, unknown>;
-  return (
-    typeof t.id === 'string' &&
-    typeof t.payload === 'object' &&
-    t.payload !== null &&
-    typeof t.retries === 'number'
-  );
-};
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
 
-export const processMainLoop = async (queue: unknown[]): Promise<void> => {
-  for (const item of queue) {
-    if (!validateTask(item)) {
-      console.error('Invalid task structure detected', item);
-      continue;
+export class ProcessingService {
+  private validateItem(item: unknown): ValidationResult {
+    const errors: string[] = [];
+
+    if (typeof item !== 'object' || item === null) {
+      return { isValid: false, errors: ['Item must be a non-null object'] };
     }
 
-    try {
-      console.log(`Processing task ${item.id}`);
-      // Processing logic would go here
-    } catch (err) {
-      console.error(`Task ${item.id} failed:`, err);
+    const candidate = item as Partial<ProcessingItem>;
+
+    if (!candidate.id || typeof candidate.id !== 'string') {
+      errors.push('Missing or invalid "id" field');
     }
+
+    if (!candidate.payload || typeof candidate.payload !== 'object') {
+      errors.push('Missing or invalid "payload" field');
+    }
+
+    if (candidate.priority !== undefined && typeof candidate.priority !== 'number') {
+      errors.push('Invalid "priority" field type');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
-};
+
+  public processBatch(items: unknown[]): {
+    processed: string[];
+    skipped: Array<{ item: unknown; errors: string[] }>;
+  } {
+    const processed: string[] = [];
+    const skipped: Array<{ item: unknown; errors: string[] }> = [];
+
+    for (const item of items) {
+      const validation = this.validateItem(item);
+      if (!validation.isValid) {
+        skipped.push({ item, errors: validation.errors });
+        continue;
+      }
+
+      const validItem = item as ProcessingItem;
+      processed.push(validItem.id);
+    }
+
+    return { processed, skipped };
+  }
+}
