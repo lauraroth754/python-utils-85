@@ -1,33 +1,44 @@
-export interface RetryOptions {
-  maxRetries?: number;
-  delay?: number;
-  backoffFactor?: number;
-  retryCondition?: (error: unknown) => boolean;
-}
+export function* range(start: number, stop?: number, step: number = 1): Generator<number, void> {
+  const actualStart = stop === undefined ? 0 : start;
+  const actualStop = stop === undefined ? start : stop;
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
-  const {
-    maxRetries = 3,
-    delay = 1000,
-    backoffFactor = 2,
-    retryCondition = () => true,
-  } = options;
+  if (step === 0) {
+    throw new Error("step cannot be 0");
+  }
 
-  let currentDelay = delay;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (attempt === maxRetries || !retryCondition(error)) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, currentDelay));
-      currentDelay *= backoffFactor;
+  if (step > 0) {
+    for (let i = actualStart; i < actualStop; i += step) {
+      yield i;
+    }
+  } else {
+    for (let i = actualStart; i > actualStop; i += step) {
+      yield i;
     }
   }
-  throw new Error("Retry execution failed");
+}
+
+export function* enumerate<T>(iterable: Iterable<T>, start: number = 0): Generator<[number, T], void> {
+  let index = start;
+  for (const item of iterable) {
+    yield [index++, item];
+  }
+}
+
+export function* zip<T extends any[]>(...iterables: { [K in keyof T]: Iterable<T[K]> }): Generator<T, void> {
+  const iterators = iterables.map(it => it[Symbol.iterator]());
+  try {
+    while (true) {
+      const results = iterators.map(it => it.next());
+      if (results.some(r => r.done)) {
+        return;
+      }
+      yield results.map(r => r.value) as T;
+    }
+  } finally {
+    for (const iterator of iterators) {
+      if (iterator.return) {
+        iterator.return();
+      }
+    }
+  }
 }
