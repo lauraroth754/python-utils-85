@@ -1,13 +1,13 @@
 # python-utils-85
 
-`python-utils-85` is a lightweight TypeScript utility library designed to bridge the gap between Python-style data handling and modern JavaScript/TypeScript development. It provides robust, chainable helper functions that simplify common array, object, and string manipulation tasks.
+`python-utils-85` is a lightweight TypeScript library designed to provide high-performance utility functions for common data manipulation tasks. It simplifies complex object transformations and string processing, ensuring your codebase remains clean and maintainable.
 
 ## Features
 
-*   **Pythonic Iterables:** Includes native-feeling implementations of `range()`, `zip()`, and `enumerate()` for cleaner loop management.
-*   **Deep Path Access:** Easily query or modify nested object structures using dot-notation strings, similar to Python’s `dict.get()`.
-*   **Type-Safe Casting:** Comprehensive casting utilities that ensure data integrity when sanitizing API responses or legacy JSON blobs.
-*   **Zero Dependencies:** Built from the ground up with no external dependencies to keep your bundle size minimal and security footprint low.
+*   **Advanced Object Sanitization**: Easily strip sensitive fields or clean nested objects with recursive depth control.
+*   **Performance-Optimized Collection Helpers**: High-speed methods for unique array filtering and grouping that outperform standard Lodash iterations.
+*   **Robust Type Guards**: Comprehensive runtime validation for complex interface structures, reducing potential `undefined` reference errors.
+*   **Zero-Dependency Core**: Built entirely with native TypeScript, ensuring a minimal bundle footprint for both Node.js and browser environments.
 
 ## Installation
 
@@ -21,26 +21,24 @@ yarn add python-utils-85
 
 ## Basic Usage
 
-The library is designed for tree-shaking support and immediate integration into existing TypeScript projects:
+Import the required utilities directly to leverage strict type checking:
 
 ```typescript
-import { range, zip, get } from 'python-utils-85';
+import { sanitizeObject, groupBy } from 'python-utils-85';
 
-// Use range similar to Python
-const sequence = range(0, 5); // [0, 1, 2, 3, 4]
+// Sanitizing sensitive user data
+const user = { id: 1, email: 'dev@example.com', password: 'secret_hash' };
+const cleanUser = sanitizeObject(user, ['password']);
 
-// Zip two arrays into an object
-const keys = ['id', 'name'];
-const values = [1, 'Alice'];
-const zipped = zip(keys, values); // { id: 1, name: 'Alice' }
+// Grouping collections
+const data = [{ category: 'A', val: 10 }, { category: 'B', val: 20 }, { category: 'A', val: 30 }];
+const grouped = groupBy(data, 'category');
 
-// Safely access nested properties
-const data = { user: { profile: { email: 'test@example.com' } } };
-const email = get(data, 'user.profile.email'); // 'test@example.com'
+console.log(cleanUser); // { id: 1, email: 'dev@example.com' }
 ```
 
 ## License
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
