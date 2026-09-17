@@ -1,24 +1,33 @@
 export interface AppConfig {
-  host: string;
-  port: number;
-  debug: boolean;
+  readonly environment: 'development' | 'production' | 'testing';
+  readonly retryAttempts: number;
+  readonly timeoutMs: number;
+  readonly debug: boolean;
 }
 
-const defaults: AppConfig = {
-  host: 'localhost',
-  port: 8080,
-  debug: false,
+/**
+ * Application configuration management and defaults.
+ */
+export const defaultConfig: AppConfig = {
+  environment: 'development',
+  retryAttempts: 3,
+  timeoutMs: 5000,
+  debug: true,
 };
 
-export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
-  ...defaults,
-  ...overrides,
-});
+/**
+ * Merges user provided overrides into the default configuration.
+ */
+export function createConfig(overrides: Partial<AppConfig>): AppConfig {
+  return { ...defaultConfig, ...overrides };
+}
 
-export const getEnvConfig = (): AppConfig => {
-  return loadConfig({
-    host: process.env.APP_HOST,
-    port: process.env.APP_PORT ? parseInt(process.env.APP_PORT, 10) : undefined,
-    debug: process.env.APP_DEBUG === 'true',
-  } as Partial<AppConfig>);
-};
+/**
+ * Validation logic for environment settings.
+ */
+export function validateConfig(config: AppConfig): boolean {
+  if (config.retryAttempts < 0) {
+    return false;
+  }
+  return config.timeoutMs > 0;
+}
