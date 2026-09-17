@@ -1,60 +1,56 @@
-export interface ProcessingItem {
-  id: string;
-  payload: Record<string, unknown>;
-  priority?: number;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: string[];
-}
-
-export class ProcessingService {
-  private validateItem(item: unknown): ValidationResult {
-    const errors: string[] = [];
-
-    if (typeof item !== 'object' || item === null) {
-      return { isValid: false, errors: ['Item must be a non-null object'] };
+/**
+ * Service providing Python-like iteration and utility operations.
+ */
+export class IterService {
+  /**
+   * Generates a sequence of numbers from start to stop by step.
+   * Mimics Python's range() function.
+   */
+  public static range(start: number, stop?: number, step: number = 1): number[] {
+    if (step === 0) {
+      throw new Error("range() arg 3 must not be zero");
     }
+    const result: number[] = [];
+    const actualStart = stop === undefined ? 0 : start;
+    const actualStop = stop === undefined ? start : stop;
 
-    const candidate = item as Partial<ProcessingItem>;
-
-    if (!candidate.id || typeof candidate.id !== 'string') {
-      errors.push('Missing or invalid "id" field');
+    if (step > 0) {
+      for (let i = actualStart; i < actualStop; i += step) {
+        result.push(i);
+      }
+    } else {
+      for (let i = actualStart; i > actualStop; i += step) {
+        result.push(i);
+      }
     }
-
-    if (!candidate.payload || typeof candidate.payload !== 'object') {
-      errors.push('Missing or invalid "payload" field');
-    }
-
-    if (candidate.priority !== undefined && typeof candidate.priority !== 'number') {
-      errors.push('Invalid "priority" field type');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+    return result;
   }
 
-  public processBatch(items: unknown[]): {
-    processed: string[];
-    skipped: Array<{ item: unknown; errors: string[] }>;
-  } {
-    const processed: string[] = [];
-    const skipped: Array<{ item: unknown; errors: string[] }> = [];
-
-    for (const item of items) {
-      const validation = this.validateItem(item);
-      if (!validation.isValid) {
-        skipped.push({ item, errors: validation.errors });
-        continue;
-      }
-
-      const validItem = item as ProcessingItem;
-      processed.push(validItem.id);
+  /**
+   * Groups elements of an array into chunks of a specified size.
+   * Mimics a common itertools chunking pattern.
+   */
+  public static chunked<T>(array: T[], size: number): T[][] {
+    if (size <= 0) {
+      throw new Error("Chunk size must be greater than zero");
     }
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
 
-    return { processed, skipped };
+  /**
+   * Pairs elements of two arrays together up to the shortest length.
+   * Mimics Python's zip() function.
+   */
+  public static zip<T, U>(a: T[], b: U[]): [T, U][] {
+    const length = Math.min(a.length, b.length);
+    const result: [T, U][] = [];
+    for (let i = 0; i < length; i++) {
+      result.push([a[i], b[i]]);
+    }
+    return result;
   }
 }
