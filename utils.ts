@@ -1,29 +1,38 @@
-export function memoize<T extends (...args: any[]) => any>(fn: T): T {
-  const cache = new Map<string, ReturnType<T>>();
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key)!;
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
+export interface TaskConfig {
+  id: string;
+  timeout: number;
+  retry: boolean;
 }
 
-export function throttle<T extends (...args: any[]) => void>(fn: T, limit: number): T {
-  let inThrottle = false;
-  return ((...args: Parameters<T>) => {
-    if (!inThrottle) {
-      fn(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
-  }) as T;
+/**
+ * Normalizes input strings for python-like path handling.
+ */
+export function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(//+$/, '');
 }
 
-export function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
-  let timeout: ReturnType<typeof setTimeout>;
-  return ((...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
-  }) as T;
+/**
+ * Parses environment variables with default fallback.
+ */
+export function getEnv(key: string, defaultValue: string): string {
+  return process.env[key] ?? defaultValue;
+}
+
+/**
+ * Generates a unique identifier for task tracking.
+ */
+export function generateId(prefix: string = 'task'): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Safely executes a callback with basic error boundary.
+ */
+export function runSafe<T>(fn: () => T): T | null {
+  try {
+    return fn();
+  } catch (err: unknown) {
+    console.error('Execution failure:', err);
+    return null;
+  }
 }
