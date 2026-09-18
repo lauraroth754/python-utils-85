@@ -1,34 +1,29 @@
-export type Cacheable = Record<string, any>;
-
-const cache = new Map<string, { value: any; expiry: number }>();
-
-export const memoize = <T extends (...args: any[]) => any>(
-  fn: T,
-  ttl: number = 60000
-): ((...args: Parameters<T>) => ReturnType<T>) => {
-  return (...args: Parameters<T>): ReturnType<T> => {
+export function memoize<T extends (...args: any[]) => any>(fn: T): T {
+  const cache = new Map<string, ReturnType<T>>();
+  return ((...args: Parameters<T>): ReturnType<T> => {
     const key = JSON.stringify(args);
-    const now = Date.now();
-    const cached = cache.get(key);
-
-    if (cached && cached.expiry > now) {
-      return cached.value;
-    }
-
+    if (cache.has(key)) return cache.get(key)!;
     const result = fn(...args);
-    cache.set(key, { value: result, expiry: now + ttl });
+    cache.set(key, result);
     return result;
-  };
-};
+  }) as T;
+}
 
-export const batchProcess = <T, R>(items: T[], fn: (batch: T[]) => R[], size: number = 100): R[] => {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += size) {
-    results.push(...fn(items.slice(i, i + size)));
-  }
-  return results;
-};
+export function throttle<T extends (...args: any[]) => void>(fn: T, limit: number): T {
+  let inThrottle = false;
+  return ((...args: Parameters<T>) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  }) as T;
+}
 
-export const clearCache = (): void => {
-  cache.clear();
-};
+export function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): T {
+  let timeout: ReturnType<typeof setTimeout>;
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  }) as T;
+}
