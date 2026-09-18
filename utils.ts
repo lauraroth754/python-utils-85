@@ -1,38 +1,29 @@
-export interface TaskConfig {
-  id: string;
-  timeout: number;
-  retry: boolean;
+export type PythonVersion = '2.7' | '3.8' | '3.11';
+
+export interface ExecutionResult {
+  output: string;
+  exitCode: number;
 }
 
-/**
- * Normalizes input strings for python-like path handling.
- */
-export function normalizePath(path: string): string {
-  return path.replace(/\\/g, '/').replace(//+$/, '');
-}
+export const sanitizePath = (path: string): string => {
+  return path.replace(/\\/g, '/').replace(/\/+/g, '/');
+};
 
-/**
- * Parses environment variables with default fallback.
- */
-export function getEnv(key: string, defaultValue: string): string {
-  return process.env[key] ?? defaultValue;
-}
+export const formatCommand = (script: string, args: string[]): string => {
+  const sanitizedArgs = args.map(arg => `"${arg.replace(/"/g, '\\"')}"`);
+  return `${script} ${sanitizedArgs.join(' ')}`;
+};
 
-/**
- * Generates a unique identifier for task tracking.
- */
-export function generateId(prefix: string = 'task'): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-}
+export const validateVersion = (version: string): version is PythonVersion => {
+  const validVersions: PythonVersion[] = ['2.7', '3.8', '3.11'];
+  return validVersions.includes(version as PythonVersion);
+};
 
-/**
- * Safely executes a callback with basic error boundary.
- */
-export function runSafe<T>(fn: () => T): T | null {
-  try {
-    return fn();
-  } catch (err: unknown) {
-    console.error('Execution failure:', err);
-    return null;
-  }
-}
+export const parseOutput = (raw: string): ExecutionResult => {
+  const lines = raw.trim().split('\n');
+  const exitCode = parseInt(lines.pop() || '0', 10);
+  return {
+    output: lines.join('\n'),
+    exitCode: isNaN(exitCode) ? 1 : exitCode
+  };
+};
