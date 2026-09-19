@@ -1,29 +1,48 @@
-export type PythonVersion = '2.7' | '3.8' | '3.11';
-
-export interface ExecutionResult {
-  output: string;
-  exitCode: number;
+export interface RetryOptions {
+  retries?: number;
+  delay?: number;
+  backoff?: number;
+  shouldRetry?: (error: unknown) => boolean;
 }
 
-export const sanitizePath = (path: string): string => {
-  return path.replace(/\\/g, '/').replace(/\/+/g, '/');
-};
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const {
+    retries = 3,
+    delay = 1000,
+    backoff = 2,
+    shouldRetry = () => true,
+  } = options;
 
-export const formatCommand = (script: string, args: string[]): string => {
-  const sanitizedArgs = args.map(arg => `"${arg.replace(/"/g, '\\"')}"`);
-  return `${script} ${sanitizedArgs.join(' ')}`;
-};
+  let attempt = 0;
+  let currentDelay = delay;
 
-export const validateVersion = (version: string): version is PythonVersion => {
-  const validVersions: PythonVersion[] = ['2.7', '3.8', '3.11'];
-  return validVersions.includes(version as PythonVersion);
-};
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      attempt++;
+      if (attempt > retries || !shouldRetry(error)) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay *= backoff;
+    }
+  }
+}
 
-export const parseOutput = (raw: string): ExecutionResult => {
-  const lines = raw.trim().split('\n');
-  const exitCode = parseInt(lines.pop() || '0', 10);
-  return {
-    output: lines.join('\n'),
-    exitCode: isNaN(exitCode) ? 1 : exitCode
-  };
-};
+export async function fetchWithRetry(
+  url: string,
+  init?: RequestInit,
+  retryOptions?: RetryOptions
+): Promise<Response> {
+  return retry(async () => {
+    const response = await fetch(url, init);
+    if (!response.ok && response.status >= 500) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response;
+  }, retryOptions);
+}
