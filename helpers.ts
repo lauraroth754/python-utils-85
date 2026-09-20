@@ -1,36 +1,36 @@
-export interface ProcessingConfig {
-  maxRetries: number;
-  timeoutMs: number;
+export type PythonVersion = '2.7' | '3.8' | '3.11' | '3.12';
+
+export interface ScriptConfig {
+  name: string;
+  version: PythonVersion;
+  timeout: number;
 }
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
+/**
+ * Validates the provided Python environment configuration.
+ * @param config The script configuration object to check.
+ * @returns True if configuration parameters are within bounds.
+ */
+export function validateConfig(config: ScriptConfig): boolean {
+  return config.timeout > 0 && config.timeout <= 3600;
 }
 
-export function validateInput(data: unknown): asserts data is Record<string, any> {
-  if (typeof data !== 'object' || data === null) {
-    throw new ValidationError('input must be a valid object');
-  }
-  if (!('id' in data) || typeof (data as any).id !== 'string') {
-    throw new ValidationError('missing or invalid required field: id');
-  }
+/**
+ * Sanitizes input strings for safe execution in shell.
+ * @param input The raw input string to process.
+ * @returns A cleaned string with shell metacharacters removed.
+ */
+export function sanitizeInput(input: string): string {
+  return input.replace(/[^a-zA-Z0-9_.-]/g, '');
 }
 
-export function processLoop(items: unknown[], config: ProcessingConfig): void {
-  for (const item of items) {
-    try {
-      validateInput(item);
-      const { id } = item as { id: string };
-      console.log(`processing item: ${id}`);
-    } catch (err) {
-      if (err instanceof ValidationError) {
-        console.error(`skipping invalid item: ${err.message}`);
-      } else {
-        throw err;
-      }
-    }
-  }
+/**
+ * Formats a command string for Python execution.
+ * @param script The sanitized script name.
+ * @param args List of arguments to pass to the script.
+ * @returns A complete execution command string.
+ */
+export function buildCommand(script: string, args: string[]): string {
+  const joinedArgs = args.map(sanitizeInput).join(' ');
+  return `python3 ${script} ${joinedArgs}`.trim();
 }
