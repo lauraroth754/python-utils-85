@@ -1,67 +1,30 @@
-import * as fs from 'fs';
-import * as path from 'path';
+export type DataMap = Record<string, unknown>;
 
-export interface LoggerOptions {
-  logDir: string;
-  maxSizeBytes?: number;
-  maxFiles?: number;
-}
+export const deepClone = <T>(obj: T): T => {
+  return JSON.parse(JSON.stringify(obj));
+};
 
-export class RotatingLogger {
-  private logDir: string;
-  private maxSizeBytes: number;
-  private maxFiles: number;
-  private currentFile: string;
-
-  constructor(options: LoggerOptions) {
-    this.logDir = options.logDir;
-    this.maxSizeBytes = options.maxSizeBytes ?? 1024 * 1024;
-    this.maxFiles = options.maxFiles ?? 5;
-    this.currentFile = path.join(this.logDir, 'app.log');
-
-    if (!fs.existsSync(this.logDir)) {
-      fs.mkdirSync(this.logDir, { recursive: true });
+export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  const result = {} as Pick<T, K>;
+  keys.forEach((key) => {
+    if (key in obj) {
+      result[key] = obj[key];
     }
-  }
+  });
+  return result;
+};
 
-  private rotate(): void {
-    if (!fs.existsSync(this.currentFile)) return;
+export const isEmpty = (data: unknown): boolean => {
+  if (data === null || data === undefined) return true;
+  if (Array.isArray(data)) return data.length === 0;
+  if (typeof data === 'object') return Object.keys(data as DataMap).length === 0;
+  return false;
+};
 
-    const stats = fs.statSync(this.currentFile);
-    if (stats.size < this.maxSizeBytes) return;
-
-    for (let i = this.maxFiles - 1; i >= 1; i--) {
-      const oldPath = path.join(this.logDir, `app.${i}.log`);
-      const newPath = path.join(this.logDir, `app.${i + 1}.log`);
-      if (fs.existsSync(oldPath)) {
-        if (i + 1 > this.maxFiles) {
-          fs.unlinkSync(oldPath);
-        } else {
-          fs.renameSync(oldPath, newPath);
-        }
-      }
-    }
-
-    fs.renameSync(this.currentFile, path.join(this.logDir, 'app.1.log'));
-  }
-
-  public log(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
-    this.rotate();
-    const timestamp = new Date().toISOString();
-    const formatted = `[${timestamp}] [${level}] ${message}\n`;
-    fs.appendFileSync(this.currentFile, formatted, 'utf-8');
-    console.log(formatted.trim());
-  }
-
-  public info(message: string): void {
-    this.log('INFO', message);
-  }
-
-  public warn(message: string): void {
-    this.log('WARN', message);
-  }
-
-  public error(message: string): void {
-    this.log('ERROR', message);
-  }
-}
+export const normalizeKeys = (obj: DataMap): DataMap => {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    const normalized = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    acc[normalized] = value;
+    return acc;
+  }, {} as DataMap);
+};
