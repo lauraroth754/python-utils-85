@@ -1,33 +1,32 @@
-export type DataMap = Record<string, unknown>;
+export const slugify = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
 
-export const sanitizeData = <T extends DataMap>(data: T): T => {
-  const result = { ...data };
-  for (const key in result) {
-    if (result[key] === null || result[key] === undefined) {
-      delete result[key];
-    }
-  }
+export const chunkArray = <T>(array: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+
+export const omit = <T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+  const result = { ...obj };
+  keys.forEach((key) => delete result[key]);
   return result;
 };
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
+export const waitFor = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-export const getNestedValue = (obj: DataMap, path: string): unknown => {
-  return path.split('.').reduce((acc: any, part) => acc && acc[part], obj);
-};
+export const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
-export const normalizeKeys = (obj: DataMap): DataMap => {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-    acc[normalizedKey] = value;
-    return acc;
-  }, {} as DataMap);
-};
+export const isDefined = <T>(value: T | null | undefined): value is T =>
+  value !== null && value !== undefined;
 
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
+export const parseSafe = <T>(json: string, fallback: T): T => {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
 };
