@@ -1,34 +1,37 @@
-export function* range(start: number, stop?: number, step: number = 1): Generator<number> {
-  const actualStart = stop === undefined ? 0 : start;
-  const actualStop = stop === undefined ? start : stop;
-
-  if (step === 0) {
-    throw new Error("range() step argument must not be zero");
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-
+  const result: number[] = [];
+  if (step === 0) return result;
   if (step > 0) {
-    for (let i = actualStart; i < actualStop; i += step) {
-      yield i;
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
     }
   } else {
-    for (let i = actualStart; i > actualStop; i += step) {
-      yield i;
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
     }
   }
+  return result;
 }
 
-export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
-  const length = Math.min(arr1.length, arr2.length);
+export function zip<T, U>(arr1: readonly T[], arr2: readonly U[]): [T, U][] {
+  const minLength = Math.min(arr1.length, arr2.length);
   const result: [T, U][] = [];
-  for (let i = 0; i < length; i++) {
+  for (let i = 0; i < minLength; i++) {
     result.push([arr1[i], arr2[i]]);
   }
   return result;
 }
 
-export function* enumerate<T>(iterable: Iterable<T>, start: number = 0): Generator<[number, T]> {
-  let index = start;
-  for (const item of iterable) {
-    yield [index++, item];
-  }
+export function enumerate<T>(arr: readonly T[]): [number, T][] {
+  return arr.map((val, index) => [index, val]);
+}
+
+export function choice<T>(arr: readonly T[]): T | undefined {
+  if (arr.length === 0) return undefined;
+  const index = Math.floor(Math.random() * arr.length);
+  return arr[index];
 }
