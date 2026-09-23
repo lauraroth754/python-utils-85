@@ -1,20 +1,35 @@
-interface AppConfig {
-  host: string;
-  port: number;
-  debug: boolean;
+export interface AppConfig {
+  readonly environment: 'development' | 'production';
+  readonly retryAttempts: number;
+  readonly timeoutMs: number;
 }
 
-const defaults: AppConfig = {
-  host: 'localhost',
-  port: 8080,
-  debug: false,
+/**
+ * Application configuration management utility.
+ */
+export const defaultConfig: AppConfig = {
+  environment: 'production',
+  retryAttempts: 3,
+  timeoutMs: 5000,
 };
 
-export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
-  return { ...defaults, ...overrides };
+/**
+ * Merges partial configuration with defaults.
+ * @param overrides Partial configuration options
+ * @returns Full application configuration object
+ */
+export function createConfig(overrides: Partial<AppConfig>): AppConfig {
+  return {
+    ...defaultConfig,
+    ...overrides,
+  };
 }
 
-export const config = loadConfig({
-  port: parseInt(process.env.PORT || '0') || defaults.port,
-  debug: process.env.DEBUG === 'true',
-});
+/**
+ * Validates if the configuration is secure for production.
+ * @param config The application configuration to check
+ * @returns Boolean indicating if config is production ready
+ */
+export function isProductionReady(config: AppConfig): boolean {
+  return config.environment === 'production' && config.timeoutMs >= 1000;
+}
