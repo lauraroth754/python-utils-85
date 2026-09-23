@@ -1,32 +1,50 @@
-export const chunk = <T>(arr: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );
+export class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+  private readonly max: number;
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  constructor(max = 1000) {
+    this.max = max;
+  }
 
-export const clamp = (val: number, min: number, max: number): number =>
-  Math.min(Math.max(val, min), max);
+  get(key: K): V | undefined {
+    const item = this.cache.get(key);
+    if (item !== undefined) {
+      this.cache.delete(key);
+      this.cache.set(key, item);
+    }
+    return item;
+  }
 
-export const groupBy = <T, K extends PropertyKey>(
-  items: T[],
-  keySelector: (item: T) => K
-): Record<K, T[]> =>
-  items.reduce((acc, item) => {
-    const key = keySelector(item);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<K, T[]>);
+  set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.max) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
 
-export const debounce = <T extends (...args: any[]) => void>(
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+export function memoize<T extends (...args: any[]) => any>(
   fn: T,
-  delay: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
-  };
-};
+  maxSize = 1000
+): T {
+  const cache = new LRUCache<string, ReturnType<T>>(maxSize);
+  return function (this: any, ...args: Parameters<T>): ReturnType<T> {
+    const key = JSON.stringify(args);
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const result = fn.apply(this, args);
+    cache.set(key, result);
+    return result;
+  } as T;
+}
