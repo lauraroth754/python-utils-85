@@ -1,50 +1,35 @@
-export class LRUCache<K, V> {
-  private cache = new Map<K, V>();
-  private readonly max: number;
-
-  constructor(max = 1000) {
-    this.max = max;
-  }
-
-  get(key: K): V | undefined {
-    const item = this.cache.get(key);
-    if (item !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, item);
-    }
-    return item;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.max) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
-    }
-    this.cache.set(key, value);
-  }
-
-  clear(): void {
-    this.cache.clear();
-  }
+export interface ProcessingResult {
+  success: boolean;
+  data?: any;
+  error?: string;
 }
 
-export function memoize<T extends (...args: any[]) => any>(
-  fn: T,
-  maxSize = 1000
-): T {
-  const cache = new LRUCache<string, ReturnType<T>>(maxSize);
-  return function (this: any, ...args: Parameters<T>): ReturnType<T> {
-    const key = JSON.stringify(args);
-    const cached = cache.get(key);
-    if (cached !== undefined) {
-      return cached;
+export const validateInput = (input: unknown): input is Record<string, any> => {
+  return typeof input === 'object' && input !== null && 'id' in input;
+};
+
+export const processData = (items: unknown[]): ProcessingResult[] => {
+  return items.map((item) => {
+    if (!validateInput(item)) {
+      return { success: false, error: 'invalid input format' };
     }
-    const result = fn.apply(this, args);
-    cache.set(key, result);
-    return result;
-  } as T;
-}
+
+    try {
+      const result = { ...item, processedAt: Date.now() };
+      return { success: true, data: result };
+    } catch (err) {
+      return { success: false, error: 'processing failure' };
+    }
+  });
+};
+
+export const runMainLoop = (batch: unknown[]): void => {
+  const results = processData(batch);
+  results.forEach((res, idx) => {
+    if (!res.success) {
+      console.error(`Item ${idx} failed: ${res.error}`);
+    } else {
+      console.log(`Item ${idx} processed:`, res.data);
+    }
+  });
+};
