@@ -1,35 +1,32 @@
-export interface AppConfig {
-  readonly environment: 'development' | 'production';
-  readonly retryAttempts: number;
-  readonly timeoutMs: number;
+import fs from 'fs';
+import path from 'path';
+
+interface Config {
+  port: number;
+  debug: boolean;
+  host: string;
 }
 
-/**
- * Application configuration management utility.
- */
-export const defaultConfig: AppConfig = {
-  environment: 'production',
-  retryAttempts: 3,
-  timeoutMs: 5000,
+const DEFAULT_CONFIG: Config = {
+  port: 8080,
+  debug: false,
+  host: 'localhost',
 };
 
-/**
- * Merges partial configuration with defaults.
- * @param overrides Partial configuration options
- * @returns Full application configuration object
- */
-export function createConfig(overrides: Partial<AppConfig>): AppConfig {
-  return {
-    ...defaultConfig,
-    ...overrides,
-  };
-}
+export const loadConfig = (configPath?: string): Config => {
+  if (!configPath || !fs.existsSync(configPath)) {
+    return { ...DEFAULT_CONFIG };
+  }
 
-/**
- * Validates if the configuration is secure for production.
- * @param config The application configuration to check
- * @returns Boolean indicating if config is production ready
- */
-export function isProductionReady(config: AppConfig): boolean {
-  return config.environment === 'production' && config.timeoutMs >= 1000;
-}
+  try {
+    const fileContent = fs.readFileSync(path.resolve(configPath), 'utf-8');
+    const parsed = JSON.parse(fileContent);
+    return { ...DEFAULT_CONFIG, ...parsed };
+  } catch (error) {
+    return { ...DEFAULT_CONFIG };
+  }
+};
+
+export const getEnvOrDefault = (key: string, defaultValue: string): string => {
+  return process.env[key] ?? defaultValue;
+};
