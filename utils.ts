@@ -1,35 +1,34 @@
-export interface ProcessingResult {
-  success: boolean;
-  data?: any;
-  error?: string;
+export type PythonVersion = '3.9' | '3.10' | '3.11' | '3.12';
+
+export interface ExecutionResult {
+  output: string;
+  exitCode: number;
 }
 
-export const validateInput = (input: unknown): input is Record<string, any> => {
-  return typeof input === 'object' && input !== null && 'id' in input;
+export const sanitizePath = (path: string): string => {
+  return path.replace(/\\/g, '/').replace(/\/+/g, '/');
 };
 
-export const processData = (items: unknown[]): ProcessingResult[] => {
-  return items.map((item) => {
-    if (!validateInput(item)) {
-      return { success: false, error: 'invalid input format' };
-    }
-
-    try {
-      const result = { ...item, processedAt: Date.now() };
-      return { success: true, data: result };
-    } catch (err) {
-      return { success: false, error: 'processing failure' };
-    }
-  });
+export const formatCommand = (script: string, args: string[] = []): string => {
+  return `python3 ${script} ${args.join(' ')}`.trim();
 };
 
-export const runMainLoop = (batch: unknown[]): void => {
-  const results = processData(batch);
-  results.forEach((res, idx) => {
-    if (!res.success) {
-      console.error(`Item ${idx} failed: ${res.error}`);
-    } else {
-      console.log(`Item ${idx} processed:`, res.data);
-    }
-  });
+export const parseOutput = (raw: string): ExecutionResult => {
+  const lines = raw.trim().split('\n');
+  const exitCode = parseInt(lines.pop() || '0', 10);
+  return { output: lines.join('\n'), exitCode };
+};
+
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
+
+export const getEnvVariable = (key: string, fallback: string): string => {
+  return process.env[key] || fallback;
+};
+
+export const validateVersion = (version: string): version is PythonVersion => {
+  return ['3.9', '3.10', '3.11', '3.12'].includes(version);
 };
