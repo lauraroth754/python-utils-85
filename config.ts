@@ -1,32 +1,39 @@
-import fs from 'fs';
-import path from 'path';
-
-interface Config {
-  port: number;
-  debug: boolean;
-  host: string;
+export interface ConfigOptions<T> {
+  defaults: T;
+  envPrefix?: string;
 }
 
-const DEFAULT_CONFIG: Config = {
-  port: 8080,
-  debug: false,
-  host: 'localhost',
-};
+export class ConfigLoader<T extends Record<string, unknown>> {
+  private readonly defaults: T;
+  private readonly envPrefix: string;
 
-export const loadConfig = (configPath?: string): Config => {
-  if (!configPath || !fs.existsSync(configPath)) {
-    return { ...DEFAULT_CONFIG };
+  constructor(options: ConfigOptions<T>) {
+    this.defaults = options.defaults;
+    this.envPrefix = options.envPrefix ? `${options.envPrefix}_` : '';
   }
 
-  try {
-    const fileContent = fs.readFileSync(path.resolve(configPath), 'utf-8');
-    const parsed = JSON.parse(fileContent);
-    return { ...DEFAULT_CONFIG, ...parsed };
-  } catch (error) {
-    return { ...DEFAULT_CONFIG };
+  private isObject(item: unknown): item is Record<string, unknown> {
+    return Boolean(item && typeof item === 'object' && !Array.isArray(item));
   }
-};
 
-export const getEnvOrDefault = (key: string, defaultValue: string): string => {
-  return process.env[key] ?? defaultValue;
-};
+  private merge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+    const output = { ...target };
+    for (const key of Object.keys(source)) {
+      const targetValue = target[key];
+      const sourceValue = source[key];
+      if (this.isObject(targetValue) && this.isObject(sourceValue)) {
+        output[key] = this.merge(targetValue, sourceValue);
+      } else if (sourceValue !== undefined) {
+        output[key] = sourceValue;
+      }
+    }
+    return output;
+  }
+
+  public load(overrides: Partial<T> = {}): T {
+    return this.merge(
+      this.defaults as Record<string, unknown>,
+      overrides as Record<string, unknown>
+    ) as T;
+  }
+}
