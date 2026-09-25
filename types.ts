@@ -1,7 +1,7 @@
 export interface PythonProcessResult {
+  readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
-  readonly exitCode: number;
 }
 
 export interface ExecutionOptions {
@@ -10,25 +10,35 @@ export interface ExecutionOptions {
   readonly cwd?: string;
 }
 
-export interface PythonModuleConfig {
-  readonly name: string;
-  readonly version: string;
-  readonly dependencies: ReadonlyArray<string>;
-}
-
-export type PythonRuntime = 'python3' | 'pypy3' | 'python3.11';
+export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
 
 /**
- * Orchestrates external python process lifecycle
+ * Configuration schema for python interpreter discovery.
  */
-export interface IProcessManager {
-  execute(command: string, options?: ExecutionOptions): Promise<PythonProcessResult>;
-  validateRuntime(runtime: PythonRuntime): Promise<boolean>;
+export interface InterpreterConfig {
+  readonly binaryPath: string;
+  readonly version: PythonVersion;
+  readonly virtualEnvPath?: string;
 }
 
-export class PythonRuntimeError extends Error {
-  constructor(public readonly code: number, message: string) {
+/**
+ * Represents a mapped Python object structure.
+ */
+export type PythonMapping = Record<string, unknown>;
+
+export interface TaskContext {
+  readonly id: string;
+  readonly payload: PythonMapping;
+  readonly retryCount: number;
+}
+
+export class PythonExecutionError extends Error {
+  constructor(
+    public readonly message: string,
+    public readonly exitCode: number,
+    public readonly output: string
+  ) {
     super(message);
-    this.name = 'PythonRuntimeError';
+    this.name = 'PythonExecutionError';
   }
 }
