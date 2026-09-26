@@ -1,34 +1,27 @@
-export type PythonVersion = '3.9' | '3.10' | '3.11' | '3.12';
-
-export interface ExecutionResult {
-  output: string;
-  exitCode: number;
+export interface RetryOptions {
+  maxAttempts: number;
+  delayMs: number;
 }
 
-export const sanitizePath = (path: string): string => {
-  return path.replace(/\\/g, '/').replace(/\/+/g, '/');
-};
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = { maxAttempts: 3, delayMs: 1000 }
+): Promise<T> {
+  let lastError: unknown;
 
-export const formatCommand = (script: string, args: string[] = []): string => {
-  return `python3 ${script} ${args.join(' ')}`.trim();
-};
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < options.maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+      }
+    }
+  }
 
-export const parseOutput = (raw: string): ExecutionResult => {
-  const lines = raw.trim().split('\n');
-  const exitCode = parseInt(lines.pop() || '0', 10);
-  return { output: lines.join('\n'), exitCode };
-};
+  throw lastError;
+}
 
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
-
-export const getEnvVariable = (key: string, fallback: string): string => {
-  return process.env[key] || fallback;
-};
-
-export const validateVersion = (version: string): version is PythonVersion => {
-  return ['3.9', '3.10', '3.11', '3.12'].includes(version);
-};
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
