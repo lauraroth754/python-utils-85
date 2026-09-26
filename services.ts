@@ -1,33 +1,49 @@
-export type DataMap = Record<string, unknown>;
+export interface RetryOptions {
+  retries?: number;
+  delay?: number;
+  backoff?: boolean;
+  onRetry?: (attempt: number, error: unknown) => void;
+}
 
-export const sanitizeData = <T extends DataMap>(data: T): T => {
-  const sanitized = { ...data };
-  for (const key in sanitized) {
-    if (sanitized[key] === null || sanitized[key] === undefined) {
-      delete sanitized[key];
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const {
+    retries = 3,
+    delay = 1000,
+    backoff = true,
+    onRetry
+  } = options;
+
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      attempt++;
+      if (attempt > retries) {
+        throw error;
+      }
+      if (onRetry) {
+        onRetry(attempt, error);
+      }
+      const currentDelay = backoff ? delay * Math.pow(2, attempt - 1) : delay;
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
     }
   }
-  return sanitized;
-};
+}
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
-
-export const validateKeys = (data: DataMap, required: string[]): boolean => {
-  return required.every((key) => Object.prototype.hasOwnProperty.call(data, key));
-};
-
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-};
-
-export const mapBy = <T>(array: T[], key: keyof T): Map<T[keyof T], T> => {
-  const map = new Map<T[keyof T], T>();
-  array.forEach((item) => map.set(item[key], item));
-  return map;
-};
+export async function fetchWithRetry<T>(
+  url: string,
+  init?: RequestInit,
+  options?: RetryOptions
+): Promise<T> {
+  return retry(async () => {
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      throw new Error(`HTTP error status ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  }, options);
+}
