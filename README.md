@@ -1,44 +1,55 @@
 # python-utils-85
 
-`python-utils-85` is a lightweight TypeScript library designed to provide high-performance utility functions for common data manipulation tasks. It simplifies complex object transformations and string processing, ensuring your codebase remains clean and maintainable.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Bring the simplicity and power of Python's built-in utilities directly into your TypeScript applications with zero external dependencies. This lightweight library delivers highly optimized, fully type-safe ports of Python staples like `range`, `zip`, and `Counter` to streamline your modern JavaScript and TypeScript workflows.
 
 ## Features
 
-*   **Advanced Object Sanitization**: Easily strip sensitive fields or clean nested objects with recursive depth control.
-*   **Performance-Optimized Collection Helpers**: High-speed methods for unique array filtering and grouping that outperform standard Lodash iterations.
-*   **Robust Type Guards**: Comprehensive runtime validation for complex interface structures, reducing potential `undefined` reference errors.
-*   **Zero-Dependency Core**: Built entirely with native TypeScript, ensuring a minimal bundle footprint for both Node.js and browser environments.
+* **Pythonic Iterables:** Native TypeScript implementations of `range()`, `zip()`, and `enumerate()` to write cleaner, more expressive loops.
+* **Advanced Collections:** High-performance `Counter` and `DefaultMap` classes that replicate Python's `collections` module using ES6 Maps.
+* **Type-Safe Helpers:** Strict generic type inference out of the box, ensuring compiler errors instead of runtime bugs.
+* **Zero Dependencies:** Compiles to tiny ESM and CommonJS footprints, keeping your production bundle incredibly light.
 
 ## Installation
 
-Install the package via npm or yarn:
+Install the package via npm, yarn, or pnpm:
 
 ```bash
 npm install python-utils-85
-# or
+```
+
+```bash
 yarn add python-utils-85
 ```
 
-## Basic Usage
+## Usage
 
-Import the required utilities directly to leverage strict type checking:
+Import and use python-like utilities directly in your TypeScript code:
 
 ```typescript
-import { sanitizeObject, groupBy } from 'python-utils-85';
+import { range, zip, Counter, DefaultMap } from 'python-utils-85';
 
-// Sanitizing sensitive user data
-const user = { id: 1, email: 'dev@example.com', password: 'secret_hash' };
-const cleanUser = sanitizeObject(user, ['password']);
+// 1. Easy counting with Counter
+const fruitBasket = ['apple', 'banana', 'apple', 'orange', 'banana', 'apple'];
+const counts = new Counter(fruitBasket);
+console.log(counts.mostCommon(2)); 
+// Output: [ ['apple', 3], ['banana', 2] ]
 
-// Grouping collections
-const data = [{ category: 'A', val: 10 }, { category: 'B', val: 20 }, { category: 'A', val: 30 }];
-const grouped = groupBy(data, 'category');
+// 2. Python-style loop mechanics
+const names = ['Alice', 'Bob', 'Charlie'];
+const scores = [85, 92, 78];
 
-console.log(cleanUser); // { id: 1, email: 'dev@example.com' }
+for (const [index, [name, score]] of zip(range(1, 4), zip(names, scores))) {
+  console.log(`#${index}: ${name} scored ${score}`);
+}
+
+// 3. Auto-initializing DefaultMap
+const groups = new DefaultMap<string, number[]>(() => []);
+groups.get('math').push(95);
+console.log(groups.get('math')); // [95]
 ```
 
 ## License
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. Created by Developer.
