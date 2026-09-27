@@ -1,49 +1,38 @@
-export interface RetryOptions {
-  retries?: number;
-  delay?: number;
-  backoff?: boolean;
-  onRetry?: (attempt: number, error: unknown) => void;
-}
+export type DataMap = Record<string, unknown>;
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
-  const {
-    retries = 3,
-    delay = 1000,
-    backoff = true,
-    onRetry
-  } = options;
-
-  let attempt = 0;
-  while (true) {
-    try {
-      return await fn();
-    } catch (error) {
-      attempt++;
-      if (attempt > retries) {
-        throw error;
-      }
-      if (onRetry) {
-        onRetry(attempt, error);
-      }
-      const currentDelay = backoff ? delay * Math.pow(2, attempt - 1) : delay;
-      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+export const sanitizeData = <T extends DataMap>(data: T): T => {
+  const sanitized = { ...data };
+  for (const key in sanitized) {
+    if (sanitized[key] === undefined || sanitized[key] === null) {
+      delete sanitized[key];
     }
   }
-}
+  return sanitized;
+};
 
-export async function fetchWithRetry<T>(
-  url: string,
-  init?: RequestInit,
-  options?: RetryOptions
-): Promise<T> {
-  return retry(async () => {
-    const response = await fetch(url, init);
-    if (!response.ok) {
-      throw new Error(`HTTP error status ${response.status}`);
+export const transformKeys = <T extends DataMap>(data: T, transform: (key: string) => string): DataMap => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    acc[transform(key)] = value;
+    return acc;
+  }, {} as DataMap);
+};
+
+export const filterByKeys = <T extends DataMap>(data: T, keys: (keyof T)[]): Partial<T> => {
+  const result: Partial<T> = {};
+  keys.forEach((key) => {
+    if (key in data) {
+      result[key] = data[key];
     }
-    return response.json() as Promise<T>;
-  }, options);
-}
+  });
+  return result;
+};
+
+export const mergeDeep = <T extends DataMap>(target: T, source: Partial<T>): T => {
+  const output = { ...target };
+  for (const key in source) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      output[key] = source[key] as T[keyof T];
+    }
+  }
+  return output;
+};
