@@ -1,4 +1,4 @@
-export function range(start: number, stop?: number, step = 1): number[] {
+export function range(start: number, stop?: number, step: number = 1): number[] {
   if (stop === undefined) {
     stop = start;
     start = 0;
@@ -19,31 +19,24 @@ export function chunk<T>(array: T[], size: number): T[][] {
   return result;
 }
 
+export function clamp(val: number, min: number, max: number): number {
+  return Math.min(Math.max(val, min), max);
+}
+
 export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
-  const minLen = Math.min(arr1.length, arr2.length);
+  const minLength = Math.min(arr1.length, arr2.length);
   const result: [T, U][] = [];
-  for (let i = 0; i < minLen; i++) {
+  for (let i = 0; i < minLength; i++) {
     result.push([arr1[i], arr2[i]]);
   }
   return result;
 }
 
-export function snakeCase(str: string): string {
-  return str
-    .replace(/([a-z])([A-Z])/g, '$1_$2')
-    .replace(/[\s-]+/g, '_')
-    .toLowerCase();
-}
-
-export function memoize<T extends (...args: any[]) => any>(fn: T): T {
-  const cache = new Map<string, ReturnType<T>>();
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) {
-      return cache.get(key)!;
-    }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
