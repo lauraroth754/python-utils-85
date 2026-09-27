@@ -1,38 +1,23 @@
-export interface AppConfig {
+export interface Config {
   readonly environment: 'development' | 'production';
+  readonly apiTimeout: number;
   readonly retryAttempts: number;
-  readonly timeoutMs: number;
 }
 
 /**
- * Application configuration management
+ * Application configuration settings for python-utils-85
  */
-export const defaultConfig: AppConfig = {
-  environment: 'development',
+export const appConfig: Config = {
+  environment: 'production',
+  apiTimeout: 5000,
   retryAttempts: 3,
-  timeoutMs: 5000,
 };
 
 /**
- * Validates provided partial configuration against strict types
+ * Retrieves a specific configuration value safely
+ * @param key - The key of the config property
+ * @returns The configuration value or undefined
  */
-export const createConfig = (overrides: Partial<AppConfig>): AppConfig => {
-  return {
-    ...defaultConfig,
-    ...overrides,
-  };
-};
-
-/**
- * Retrieves system environment settings
- */
-export const getEnvironment = (config: AppConfig): string => {
-  return config.environment;
-};
-
-/**
- * Formats timeout duration for network requests
- */
-export const getTimeoutSeconds = (config: AppConfig): number => {
-  return config.timeoutMs / 1000;
-};
+export function getConfigValue<K extends keyof Config>(key: K): Config[K] {
+  return appConfig[key];
+}
