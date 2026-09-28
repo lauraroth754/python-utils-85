@@ -1,38 +1,33 @@
-export type DataMap = Record<string, unknown>;
+export interface InputData {
+  id: string;
+  payload: Record<string, unknown>;
+  timestamp: number;
+}
 
-export const sanitizeData = <T extends DataMap>(data: T): T => {
-  const sanitized = { ...data };
-  for (const key in sanitized) {
-    if (sanitized[key] === undefined || sanitized[key] === null) {
-      delete sanitized[key];
+export const validateInput = (data: unknown): data is InputData => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'payload' in data &&
+    'timestamp' in data &&
+    typeof (data as InputData).id === 'string' &&
+    typeof (data as InputData).timestamp === 'number'
+  );
+};
+
+export const processInput = (items: unknown[]): void => {
+  for (const item of items) {
+    if (!validateInput(item)) {
+      console.error('Invalid input schema detected');
+      continue;
+    }
+
+    try {
+      const { id, payload } = item;
+      console.log(`Processing unit: ${id}`, payload);
+    } catch (error) {
+      console.error(`Execution failure for ${item.id}:`, error);
     }
   }
-  return sanitized;
-};
-
-export const transformKeys = <T extends DataMap>(data: T, transform: (key: string) => string): DataMap => {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    acc[transform(key)] = value;
-    return acc;
-  }, {} as DataMap);
-};
-
-export const filterByKeys = <T extends DataMap>(data: T, keys: (keyof T)[]): Partial<T> => {
-  const result: Partial<T> = {};
-  keys.forEach((key) => {
-    if (key in data) {
-      result[key] = data[key];
-    }
-  });
-  return result;
-};
-
-export const mergeDeep = <T extends DataMap>(target: T, source: Partial<T>): T => {
-  const output = { ...target };
-  for (const key in source) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      output[key] = source[key] as T[keyof T];
-    }
-  }
-  return output;
 };
