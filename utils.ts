@@ -1,27 +1,45 @@
-export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
+  }
+  if (step === 0) {
+    throw new Error('Step cannot be zero');
+  }
+  const result: number[] = [];
+  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
+    result.push(i);
+  }
+  return result;
+}
 
-export const deepClone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
 
-export const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
+export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+  const result = { ...obj };
+  for (const key of keys) {
+    delete result[key];
+  }
+  return result;
+}
 
-export const sleep = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
+export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+  const result = {} as Pick<T, K>;
+  for (const key of keys) {
+    if (key in obj) {
+      result[key] = obj[key];
+    }
+  }
+  return result;
+}
 
-export const getOrElse = <T>(value: T | null | undefined, defaultValue: T): T => {
-  return value ?? defaultValue;
-};
-
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
-
-export const isDefined = <T>(value: T | null | undefined): value is T => {
-  return value !== null && value !== undefined;
-};
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
