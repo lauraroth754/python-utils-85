@@ -1,44 +1,43 @@
-export interface PythonProcessResult {
-  readonly exitCode: number;
-  readonly stdout: string;
-  readonly stderr: string;
+export type CacheKey = string | number;
+
+export interface PerformanceMetrics {
+  executionTime: number;
+  memoryUsage: number;
 }
 
-export interface ExecutionOptions {
-  readonly timeout?: number;
-  readonly env?: Record<string, string>;
-  readonly cwd?: string;
-}
+export class Memoizer<T, R> {
+  private cache = new Map<CacheKey, R>();
+  private limit: number;
 
-export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
+  constructor(limit: number = 1000) {
+    this.limit = limit;
+  }
 
-/**
- * Configuration schema for python interpreter discovery.
- */
-export interface InterpreterConfig {
-  readonly binaryPath: string;
-  readonly version: PythonVersion;
-  readonly virtualEnvPath?: string;
-}
+  public memoize(fn: (arg: T) => R, key: CacheKey): R {
+    if (this.cache.has(key)) {
+      return this.cache.get(key)!;
+    }
 
-/**
- * Represents a mapped Python object structure.
- */
-export type PythonMapping = Record<string, unknown>;
+    if (this.cache.size >= this.limit) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
 
-export interface TaskContext {
-  readonly id: string;
-  readonly payload: PythonMapping;
-  readonly retryCount: number;
-}
+    const result = fn(key as unknown as T);
+    this.cache.set(key, result);
+    return result;
+  }
 
-export class PythonExecutionError extends Error {
-  constructor(
-    public readonly message: string,
-    public readonly exitCode: number,
-    public readonly output: string
-  ) {
-    super(message);
-    this.name = 'PythonExecutionError';
+  public clear(): void {
+    this.cache.clear();
+  }
+
+  public get size(): number {
+    return this.cache.size;
   }
 }
+
+export const computePerformance = (start: number): PerformanceMetrics => ({
+  executionTime: performance.now() - start,
+  memoryUsage: (process.memoryUsage().heapUsed / 1024 / 1024),
+});
