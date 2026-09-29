@@ -1,24 +1,33 @@
-import { createLogger, format, transports, Logger } from 'winston';
-import 'winston-daily-rotate-file';
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
+  }
+  if (step === 0) {
+    throw new Error("step cannot be zero");
+  }
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
+    }
+  }
+  return result;
+}
 
-export const createRollingLogger = (filename: string): Logger => {
-  return createLogger({
-    level: 'info',
-    format: format.combine(
-      format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-      format.json()
-    ),
-    transports: [
-      new transports.Console(),
-      new transports.DailyRotateFile({
-        filename: `logs/${filename}-%DATE%.log`,
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxSize: '20m',
-        maxFiles: '14d'
-      })
-    ]
-  });
-};
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
+  const length = Math.min(arr1.length, arr2.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < length; i++) {
+    result.push([arr1[i], arr2[i]]);
+  }
+  return result;
+}
 
-export const logger = createRollingLogger('python-utils-85');
+export function enumerate<T>(array: T[]): [number, T][] {
+  return array.map((item, index) => [index, item]);
+}
