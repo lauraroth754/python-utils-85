@@ -1,33 +1,27 @@
-export function range(start: number, stop?: number, step: number = 1): number[] {
-  if (stop === undefined) {
-    stop = start;
-    start = 0;
-  }
-  if (step === 0) {
-    throw new Error("step cannot be zero");
-  }
-  const result: number[] = [];
-  if (step > 0) {
-    for (let i = start; i < stop; i += step) {
-      result.push(i);
-    }
-  } else {
-    for (let i = start; i > stop; i += step) {
-      result.push(i);
-    }
-  }
-  return result;
+export interface RetryOptions {
+  maxAttempts: number;
+  delayMs: number;
 }
 
-export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
-  const length = Math.min(arr1.length, arr2.length);
-  const result: [T, U][] = [];
-  for (let i = 0; i < length; i++) {
-    result.push([arr1[i], arr2[i]]);
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = { maxAttempts: 3, delayMs: 1000 }
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt < options.maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+      }
+    }
   }
-  return result;
+
+  throw lastError;
 }
 
-export function enumerate<T>(array: T[]): [number, T][] {
-  return array.map((item, index) => [index, item]);
-}
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
