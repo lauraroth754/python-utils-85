@@ -1,41 +1,29 @@
-export interface CacheEntry<T> {
-  data: T;
-  expiry: number;
+interface ProcessInput {
+  id: string;
+  value: number;
 }
 
-export class PerformanceCache {
-  private store: Map<string, CacheEntry<any>> = new Map();
-  private readonly ttl: number;
-
-  constructor(ttlMs: number = 60000) {
-    this.ttl = ttlMs;
-  }
-
-  get<T>(key: string): T | null {
-    const entry = this.store.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expiry) {
-      this.store.delete(key);
-      return null;
+export const processData = (items: unknown[]): void => {
+  for (const item of items) {
+    if (!isValid(item)) {
+      console.error('Invalid input encountered');
+      continue;
     }
-    return entry.data as T;
+    runLogic(item);
   }
+};
 
-  set<T>(key: string, data: T): void {
-    this.store.set(key, {
-      data,
-      expiry: Date.now() + this.ttl
-    });
-  }
+const isValid = (data: unknown): data is ProcessInput => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    typeof (data as ProcessInput).id === 'string' &&
+    'value' in data &&
+    typeof (data as ProcessInput).value === 'number'
+  );
+};
 
-  prune(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.store.entries()) {
-      if (now > entry.expiry) this.store.delete(key);
-    }
-  }
-
-  size(): number {
-    return this.store.size;
-  }
-}
+const runLogic = (item: ProcessInput): void => {
+  console.log(`Processing item ${item.id}: ${item.value}`);
+};
