@@ -1,20 +1,23 @@
-export interface AppConfig {
-  host: string;
+export interface Config {
   port: number;
+  host: string;
   debug: boolean;
 }
 
-const defaults: AppConfig = {
-  host: 'localhost',
+const defaults: Config = {
   port: 8080,
-  debug: false,
+  host: 'localhost',
+  debug: false
 };
 
-export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
+export function loadConfig(overrides: Partial<Config> = {}): Config {
   return { ...defaults, ...overrides };
 }
 
-export const config = loadConfig({
-  port: parseInt(process.env.PORT || '8080', 10),
-  debug: process.env.NODE_ENV !== 'production',
-});
+export function loadFromEnv(): Config {
+  return loadConfig({
+    port: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
+    host: process.env.HOST,
+    debug: process.env.DEBUG === 'true'
+  });
+}
