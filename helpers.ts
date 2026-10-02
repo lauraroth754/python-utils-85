@@ -1,28 +1,45 @@
-export type DataEntry = Record<string, unknown>;
+export interface InputData {
+  id: string;
+  value: number;
+  metadata?: Record<string, unknown>;
+}
 
-export const normalizeData = <T extends DataEntry>(data: T[]): T[] => {
-  return data.map((item) => {
-    const normalized: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(item)) {
-      normalized[key.trim().toLowerCase()] = typeof value === 'string' ? value.trim() : value;
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+export const validateInput = (data: unknown): InputData => {
+  if (!data || typeof data !== 'object') {
+    throw new ValidationError('input must be a non-null object');
+  }
+
+  const input = data as InputData;
+  if (typeof input.id !== 'string' || input.id.trim() === '') {
+    throw new ValidationError('id field is required and must be a string');
+  }
+
+  if (typeof input.value !== 'number' || isNaN(input.value)) {
+    throw new ValidationError('value field must be a valid number');
+  }
+
+  return input;
+};
+
+export const processMainLoop = (inputs: unknown[]): InputData[] => {
+  const results: InputData[] = [];
+  for (const raw of inputs) {
+    try {
+      results.push(validateInput(raw));
+    } catch (e) {
+      if (e instanceof ValidationError) {
+        console.error(`skipping invalid input: ${e.message}`);
+        continue;
+      }
+      throw e;
     }
-    return normalized as T;
-  });
-};
-
-export const filterEmpty = <T extends DataEntry>(data: T[]): T[] => {
-  return data.filter((item) => Object.values(item).some((v) => v !== null && v !== undefined && v !== ''));
-};
-
-export const groupBy = <T extends DataEntry>(data: T[], key: keyof T): Record<string, T[]> => {
-  return data.reduce((acc, item) => {
-    const group = String(item[key]);
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
-};
-
-export const pluck = <T extends DataEntry, K extends keyof T>(data: T[], key: K): T[K][] => {
-  return data.map((item) => item[key]).filter((v): v is T[K] => v !== undefined);
+  }
+  return results;
 };
