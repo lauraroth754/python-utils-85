@@ -1,32 +1,28 @@
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [array];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
+export type DataEntry = Record<string, unknown>;
 
-export function safeJsonParse<T>(jsonString: string, fallback: T): T {
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch {
-    return fallback;
-  }
-}
+export const normalizeData = <T extends DataEntry>(data: T[]): T[] => {
+  return data.map((item) => {
+    const normalized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(item)) {
+      normalized[key.trim().toLowerCase()] = typeof value === 'string' ? value.trim() : value;
+    }
+    return normalized as T;
+  });
+};
 
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+export const filterEmpty = <T extends DataEntry>(data: T[]): T[] => {
+  return data.filter((item) => Object.values(item).some((v) => v !== null && v !== undefined && v !== ''));
+};
 
-export function truncate(str: string, length: number, suffix: string = '...'): string {
-  if (str.length <= length) return str;
-  return str.slice(0, Math.max(0, length - suffix.length)) + suffix;
-}
+export const groupBy = <T extends DataEntry>(data: T[], key: keyof T): Record<string, T[]> => {
+  return data.reduce((acc, item) => {
+    const group = String(item[key]);
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
+};
 
-export function isEmpty(value: unknown): boolean {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value as object).length === 0;
-  return false;
-}
+export const pluck = <T extends DataEntry, K extends keyof T>(data: T[], key: K): T[K][] => {
+  return data.map((item) => item[key]).filter((v): v is T[K] => v !== undefined);
+};
