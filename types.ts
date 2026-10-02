@@ -1,43 +1,24 @@
-export type CacheKey = string | number;
+export type Dict<V = any> = Record<string, V>;
 
-export interface PerformanceMetrics {
-  executionTime: number;
-  memoryUsage: number;
+export type Nullable<T> = T | null;
+
+export type Optional<T> = T | undefined;
+
+export type Pair<K, V> = [K, V];
+
+export interface Slice {
+  start?: number;
+  stop: number;
+  step?: number;
 }
 
-export class Memoizer<T, R> {
-  private cache = new Map<CacheKey, R>();
-  private limit: number;
+export type KeyFunc<T, R> = (item: T) => R;
 
-  constructor(limit: number = 1000) {
-    this.limit = limit;
-  }
+export type Predicate<T> = (item: T) => boolean;
 
-  public memoize(fn: (arg: T) => R, key: CacheKey): R {
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
-    }
+export type Mapper<T, R> = (item: T) => R;
 
-    if (this.cache.size >= this.limit) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-
-    const result = fn(key as unknown as T);
-    this.cache.set(key, result);
-    return result;
-  }
-
-  public clear(): void {
-    this.cache.clear();
-  }
-
-  public get size(): number {
-    return this.cache.size;
-  }
+export interface Grouped<K, T> {
+  key: K;
+  items: T[];
 }
-
-export const computePerformance = (start: number): PerformanceMetrics => ({
-  executionTime: performance.now() - start,
-  memoryUsage: (process.memoryUsage().heapUsed / 1024 / 1024),
-});
