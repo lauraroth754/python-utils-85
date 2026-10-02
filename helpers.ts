@@ -1,45 +1,46 @@
-export interface InputData {
-  id: string;
-  value: number;
-  metadata?: Record<string, unknown>;
-}
-
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-}
-
-export const validateInput = (data: unknown): InputData => {
-  if (!data || typeof data !== 'object') {
-    throw new ValidationError('input must be a non-null object');
+  if (step === 0) {
+    throw new Error("step cannot be zero");
   }
-
-  const input = data as InputData;
-  if (typeof input.id !== 'string' || input.id.trim() === '') {
-    throw new ValidationError('id field is required and must be a string');
-  }
-
-  if (typeof input.value !== 'number' || isNaN(input.value)) {
-    throw new ValidationError('value field must be a valid number');
-  }
-
-  return input;
-};
-
-export const processMainLoop = (inputs: unknown[]): InputData[] => {
-  const results: InputData[] = [];
-  for (const raw of inputs) {
-    try {
-      results.push(validateInput(raw));
-    } catch (e) {
-      if (e instanceof ValidationError) {
-        console.error(`skipping invalid input: ${e.message}`);
-        continue;
-      }
-      throw e;
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
     }
   }
-  return results;
-};
+  return result;
+}
+
+export function getNestedValue<T = any>(
+  obj: Record<string, any>,
+  path: string,
+  defaultValue?: T
+): T | undefined {
+  const parts = path.split('.');
+  let current: any = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined) {
+      return defaultValue;
+    }
+    current = current[part];
+  }
+  return current !== undefined ? (current as T) : defaultValue;
+}
+
+export function zip<T>(...arrays: T[][]): T[][] {
+  if (arrays.length === 0) return [];
+  const minLength = Math.min(...arrays.map(arr => arr.length));
+  const result: T[][] = [];
+  for (let i = 0; i < minLength; i++) {
+    result.push(arrays.map(arr => arr[i]));
+  }
+  return result;
+}
