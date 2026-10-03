@@ -1,55 +1,27 @@
-export interface AppConfig {
-  host: string;
+interface Config {
   port: number;
+  host: string;
   debug: boolean;
-  db: {
-    uri: string;
-    timeout: number;
-  };
 }
 
-const DEFAULT_CONFIG: AppConfig = {
-  host: 'localhost',
+const defaults: Config = {
   port: 8080,
-  debug: false,
-  db: {
-    uri: 'mongodb://localhost:27017/db',
-    timeout: 5000,
-  },
+  host: 'localhost',
+  debug: false
 };
 
-export class ConfigLoader<T extends object> {
-  private defaults: T;
+export const loadConfig = (overrides: Partial<Config> = {}): Config => {
+  const envConfig: Partial<Config> = {
+    ...(process.env.PORT && { port: parseInt(process.env.PORT, 10) }),
+    ...(process.env.HOST && { host: process.env.HOST }),
+    ...(process.env.DEBUG && { debug: process.env.DEBUG === 'true' })
+  };
 
-  constructor(defaults: T) {
-    this.defaults = defaults;
-  }
+  return {
+    ...defaults,
+    ...overrides,
+    ...envConfig
+  };
+};
 
-  public load(customConfig: Partial<T> = {}): T {
-    return this.merge(this.defaults, customConfig);
-  }
-
-  private merge(target: any, source: any): any {
-    const output = { ...target };
-    if (this.isObject(target) && this.isObject(source)) {
-      Object.keys(source).forEach((key) => {
-        if (this.isObject(source[key])) {
-          if (!(key in target)) {
-            Object.assign(output, { [key]: source[key] });
-          } else {
-            output[key] = this.merge(target[key], source[key]);
-          }
-        } else {
-          Object.assign(output, { [key]: source[key] });
-        }
-      });
-    }
-    return output;
-  }
-
-  private isObject(item: any): boolean {
-    return item && typeof item === 'object' && !Array.isArray(item);
-  }
-}
-
-export const appConfigLoader = new ConfigLoader<AppConfig>(DEFAULT_CONFIG);
+export type { Config };
