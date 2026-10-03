@@ -3,44 +3,41 @@ export function range(start: number, stop?: number, step: number = 1): number[] 
     stop = start;
     start = 0;
   }
-  if (step === 0) {
-    throw new Error("step cannot be zero");
-  }
   const result: number[] = [];
-  if (step > 0) {
-    for (let i = start; i < stop; i += step) {
-      result.push(i);
-    }
-  } else {
-    for (let i = start; i > stop; i += step) {
-      result.push(i);
-    }
+  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
+    result.push(i);
   }
   return result;
 }
 
-export function getNestedValue<T = any>(
-  obj: Record<string, any>,
-  path: string,
-  defaultValue?: T
-): T | undefined {
-  const parts = path.split('.');
-  let current: any = obj;
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return defaultValue;
-    }
-    current = current[part];
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
+  const length = Math.min(arr1.length, arr2.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < length; i++) {
+    result.push([arr1[i], arr2[i]]);
   }
-  return current !== undefined ? (current as T) : defaultValue;
+  return result;
 }
 
-export function zip<T>(...arrays: T[][]): T[][] {
-  if (arrays.length === 0) return [];
-  const minLength = Math.min(...arrays.map(arr => arr.length));
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
   const result: T[][] = [];
-  for (let i = 0; i < minLength; i++) {
-    result.push(arrays.map(arr => arr[i]));
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
   }
   return result;
+}
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function capitalize(str: string): string {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
