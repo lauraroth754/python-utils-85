@@ -5,36 +5,24 @@ export class ServiceError extends Error {
   }
 }
 
-export const safeExecute = async <T>(
-  operation: () => Promise<T>,
-  fallback: T
-): Promise<T> => {
+export interface ServiceResult<T> {
+  data: T | null;
+  error: ServiceError | null;
+}
+
+export async function safeExecute<T>(fn: () => Promise<T>): Promise<ServiceResult<T>> {
   try {
-    return await operation();
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      console.error(`Service failure [${error.code}]: ${error.message}`);
-      return fallback;
-    }
-    console.error('Unexpected runtime error:', error);
-    throw error;
+    const data = await fn();
+    return { data, error: null };
+  } catch (err) {
+    const error = err instanceof ServiceError ? err : new ServiceError('unknown failure', 500);
+    return { data: null, error };
   }
-};
+}
 
-export const validateData = (data: unknown): data is Record<string, unknown> => {
-  if (!data || typeof data !== 'object') {
-    throw new ServiceError('Invalid payload format', 400);
+export function validateInput<T>(input: T | null | undefined): T {
+  if (input === null || input === undefined) {
+    throw new ServiceError('invalid input provided', 400);
   }
-  return true;
-};
-
-export const fetchData = async (url: string): Promise<unknown> => {
-  if (!url.startsWith('https://')) {
-    throw new ServiceError('Insecure protocol', 403);
-  }
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new ServiceError('Network request failed', response.status);
-  }
-  return await response.json();
-};
+  return input;
+}
