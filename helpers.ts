@@ -1,35 +1,44 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-interface LoggerOptions {
-  logDir: string;
-  maxSizeMB: number;
-  maxFiles: number;
+/**
+ * Generates a sequence of numbers from start (inclusive) to stop (exclusive) by step.
+ */
+export function* range(start: number, stop?: number, step: number = 1): Generator<number, void, unknown> {
+  let begin = start;
+  let end = stop;
+  if (end === undefined) {
+    end = start;
+    begin = 0;
+  }
+  if (step === 0) {
+    throw new Error("range() step argument must not be zero");
+  }
+  if (step > 0) {
+    for (let i = begin; i < end; i += step) {
+      yield i;
+    }
+  } else {
+    for (let i = begin; i > end; i += step) {
+      yield i;
+    }
+  }
 }
 
-export const setupRotatingLogger = (options: LoggerOptions) => {
-  if (!fs.existsSync(options.logDir)) {
-    fs.mkdirSync(options.logDir, { recursive: true });
+/**
+ * Returns an iterator of tuples containing index and value.
+ */
+export function* enumerate<T>(iterable: Iterable<T>, start: number = 0): Generator<[number, T], void, unknown> {
+  let index = start;
+  for (const item of iterable) {
+    yield [index++, item];
   }
+}
 
-  const logPath = path.join(options.logDir, 'app.log');
-
-  return (message: string) => {
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] ${message}\n`;
-
-    if (fs.existsSync(logPath)) {
-      const stats = fs.statSync(logPath);
-      if (stats.size > options.maxSizeMB * 1024 * 1024) {
-        for (let i = options.maxFiles - 1; i > 0; i--) {
-          const oldFile = `${logPath}.${i}`;
-          const newFile = `${logPath}.${i + 1}`;
-          if (fs.existsSync(oldFile)) fs.renameSync(oldFile, newFile);
-        }
-        fs.renameSync(logPath, `${logPath}.1`);
-      }
-    }
-
-    fs.appendFileSync(logPath, logEntry);
-  };
-};
+/**
+ * Mimics Python's dict() constructor from key-value pairs.
+ */
+export function toDict<K extends string | number | symbol, V>(entries: Iterable<readonly [K, V]>): Record<K, V> {
+  const result = {} as Record<K, V>;
+  for (const [key, value] of entries) {
+    result[key] = value;
+  }
+  return result;
+}
