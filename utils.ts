@@ -1,28 +1,29 @@
-export type ProcessorInput = Record<string, unknown>;
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
 
-export class DataOptimizer {
-  private cache: Map<string, any> = new Map();
+export const sleep = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
-  public processBatch(data: ProcessorInput[]): any[] {
-    return data.map(item => {
-      const key = JSON.stringify(item);
-      if (this.cache.has(key)) {
-        return this.cache.get(key);
-      }
-      const result = this.transform(item);
-      this.cache.set(key, result);
-      return result;
-    });
-  }
+export const getUnique = <T>(array: T[]): T[] => {
+  return Array.from(new Set(array));
+};
 
-  private transform(item: ProcessorInput): any {
-    return Object.entries(item).reduce((acc, [k, v]) => {
-      acc[k.toLowerCase()] = typeof v === 'string' ? v.trim() : v;
-      return acc;
-    }, {} as Record<string, any>);
-  }
+export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
 
-  public clearCache(): void {
-    this.cache.clear();
-  }
-}
+export const isObject = (item: unknown): item is Record<string, unknown> => {
+  return item !== null && typeof item === 'object' && !Array.isArray(item);
+};
+
+export const formatCurrency = (amount: number, locale = 'en-US', currency = 'USD'): string => {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount);
+};
