@@ -1,27 +1,28 @@
-export interface RetryOptions {
-  maxAttempts: number;
-  delayMs: number;
-}
+export type ProcessorInput = Record<string, unknown>;
 
-export async function withRetry<T>(
-  operation: () => Promise<T>,
-  options: RetryOptions = { maxAttempts: 3, delayMs: 1000 }
-): Promise<T> {
-  let lastError: unknown;
+export class DataOptimizer {
+  private cache: Map<string, any> = new Map();
 
-  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (err) {
-      lastError = err;
-      if (attempt < options.maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+  public processBatch(data: ProcessorInput[]): any[] {
+    return data.map(item => {
+      const key = JSON.stringify(item);
+      if (this.cache.has(key)) {
+        return this.cache.get(key);
       }
-    }
+      const result = this.transform(item);
+      this.cache.set(key, result);
+      return result;
+    });
   }
 
-  throw lastError;
-}
+  private transform(item: ProcessorInput): any {
+    return Object.entries(item).reduce((acc, [k, v]) => {
+      acc[k.toLowerCase()] = typeof v === 'string' ? v.trim() : v;
+      return acc;
+    }, {} as Record<string, any>);
+  }
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  public clearCache(): void {
+    this.cache.clear();
+  }
+}
