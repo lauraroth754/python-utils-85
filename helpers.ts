@@ -1,48 +1,35 @@
-export interface RetryOptions {
-  maxRetries?: number;
-  initialDelayMs?: number;
-  backoffFactor?: number;
-  shouldRetry?: (error: unknown) => boolean;
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface LoggerOptions {
+  logDir: string;
+  maxSizeMB: number;
+  maxFiles: number;
 }
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
-  const {
-    maxRetries = 3,
-    initialDelayMs = 1000,
-    backoffFactor = 2,
-    shouldRetry = () => true,
-  } = options;
-
-  let attempt = 0;
-  let delay = initialDelayMs;
-
-  while (true) {
-    try {
-      return await fn();
-    } catch (error) {
-      attempt++;
-      if (attempt > maxRetries || !shouldRetry(error)) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay *= backoffFactor;
-    }
+export const setupRotatingLogger = (options: LoggerOptions) => {
+  if (!fs.existsSync(options.logDir)) {
+    fs.mkdirSync(options.logDir, { recursive: true });
   }
-}
 
-export async function fetchWithRetry(
-  url: string,
-  init?: RequestInit,
-  retryOptions?: RetryOptions
-): Promise<Response> {
-  return retry(async () => {
-    const response = await fetch(url, init);
-    if (!response.ok && response.status >= 500) {
-      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+  const logPath = path.join(options.logDir, 'app.log');
+
+  return (message: string) => {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}\n`;
+
+    if (fs.existsSync(logPath)) {
+      const stats = fs.statSync(logPath);
+      if (stats.size > options.maxSizeMB * 1024 * 1024) {
+        for (let i = options.maxFiles - 1; i > 0; i--) {
+          const oldFile = `${logPath}.${i}`;
+          const newFile = `${logPath}.${i + 1}`;
+          if (fs.existsSync(oldFile)) fs.renameSync(oldFile, newFile);
+        }
+        fs.renameSync(logPath, `${logPath}.1`);
+      }
     }
-    return response;
-  }, retryOptions);
-}
+
+    fs.appendFileSync(logPath, logEntry);
+  };
+};
