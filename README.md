@@ -1,55 +1,63 @@
-# python-utils-85
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Bring the simplicity and power of Python's built-in utilities directly into your TypeScript applications with zero external dependencies. This lightweight library delivers highly optimized, fully type-safe ports of Python staples like `range`, `zip`, and `Counter` to streamline your modern JavaScript and TypeScript workflows.
+# python-utils-85
+
+`python-utils-85` provides a set of type-safe utilities for managing Python subprocesses, virtual environments, and cross-runtime data serialization within Node.js and TypeScript applications. It simplifies mixed-stack operations by handling Python environment detection, script execution, and output parsing seamlessly.
 
 ## Features
 
-* **Pythonic Iterables:** Native TypeScript implementations of `range()`, `zip()`, and `enumerate()` to write cleaner, more expressive loops.
-* **Advanced Collections:** High-performance `Counter` and `DefaultMap` classes that replicate Python's `collections` module using ES6 Maps.
-* **Type-Safe Helpers:** Strict generic type inference out of the box, ensuring compiler errors instead of runtime bugs.
-* **Zero Dependencies:** Compiles to tiny ESM and CommonJS footprints, keeping your production bundle incredibly light.
+- **Virtual Environment Management:** Automatically locate, create, and validate local `.venv` or Conda environments from your TypeScript codebase.
+- **Typed Subprocess Runner:** Execute external Python scripts or inline code snippets asynchronously with native JSON object stdout auto-parsing.
+- **PyPI Metadata Fetcher:** Query package specs, version histories, and wheel metadata directly using lightweight HTTP helpers.
+- **Data Structure Serializer:** Convert complex TypeScript primitives into valid Python literal syntax for dynamic script generation.
 
 ## Installation
 
-Install the package via npm, yarn, or pnpm:
+Install the package via npm:
 
 ```bash
 npm install python-utils-85
 ```
 
+Or using pnpm:
+
 ```bash
-yarn add python-utils-85
+pnpm add python-utils-85
 ```
 
-## Usage
+## Basic Usage
 
-Import and use python-like utilities directly in your TypeScript code:
+The following example demonstrates how to verify a virtual environment and execute a Python script with structured inputs:
 
 ```typescript
-import { range, zip, Counter, DefaultMap } from 'python-utils-85';
+import { PythonRunner, VenvManager } from 'python-utils-85';
 
-// 1. Easy counting with Counter
-const fruitBasket = ['apple', 'banana', 'apple', 'orange', 'banana', 'apple'];
-const counts = new Counter(fruitBasket);
-console.log(counts.mostCommon(2)); 
-// Output: [ ['apple', 3], ['banana', 2] ]
+async function executePipeline() {
+  const venv = new VenvManager({ path: './.venv' });
+  
+  if (!await venv.exists()) {
+    await venv.create({ pythonVersion: '3.10' });
+  }
 
-// 2. Python-style loop mechanics
-const names = ['Alice', 'Bob', 'Charlie'];
-const scores = [85, 92, 78];
+  const runner = new PythonRunner({ 
+    pythonPath: venv.getExecutablePath() 
+  });
 
-for (const [index, [name, score]] of zip(range(1, 4), zip(names, scores))) {
-  console.log(`#${index}: ${name} scored ${score}`);
+  const response = await runner.runScript<{ status: string; processedCount: number }>(
+    './scripts/transform.py',
+    {
+      args: ['--batch-size', '64'],
+      inputData: { items: [1, 2, 3, 4, 5] }
+    }
+  );
+
+  console.log(`Execution status: ${response.data.status}`);
+  console.log(`Items processed: ${response.data.processedCount}`);
 }
 
-// 3. Auto-initializing DefaultMap
-const groups = new DefaultMap<string, number[]>(() => []);
-groups.get('math').push(95);
-console.log(groups.get('math')); // [95]
+executePipeline();
 ```
 
 ## License
 
-Distributed under the MIT License. Created by Developer.
+This project is licensed under the MIT License - see the LICENSE file for details.
