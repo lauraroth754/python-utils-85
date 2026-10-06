@@ -1,37 +1,39 @@
-export type Nullable<T> = T | null | undefined;
+export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
 
-export type DeepPartial<T> = T extends object
-  ? { [P in keyof T]?: DeepPartial<T[P]> }
-  : T;
-
-export type Dictionary<T = unknown> = Record<string, T>;
-
-export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
-
-export interface Success<T> {
-  success: true;
-  value: T;
+export interface ScriptConfig {
+  readonly entryPoint: string;
+  readonly envVars: Record<string, string>;
+  readonly timeoutMs: number;
 }
 
-export interface Failure<E = Error> {
-  success: false;
-  error: E;
+export interface ExecutionResult {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number;
+  readonly durationMs: number;
 }
 
-export type Result<T, E = Error> = Success<T> | Failure<E>;
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  hasNextPage: boolean;
+/**
+ * Represents the interface for Python interpreter settings.
+ */
+export interface InterpreterSettings {
+  readonly path: string;
+  readonly version: PythonVersion;
+  readonly venvPath?: string;
 }
 
-export function isSuccess<T, E>(result: Result<T, E>): result is Success<T> {
-  return result.success === true;
+export type ProcessHandler = (result: ExecutionResult) => void;
+
+export interface ValidationResult {
+  readonly isValid: boolean;
+  readonly errors: ReadonlyArray<string>;
 }
 
-export function isFailure<T, E>(result: Result<T, E>): result is Failure<E> {
-  return result.success === false;
+/**
+ * Configuration for utility service initialization.
+ */
+export interface ServiceConfiguration {
+  readonly cacheEnabled: boolean;
+  readonly maxRetries: number;
+  readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
