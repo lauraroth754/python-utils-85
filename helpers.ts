@@ -1,47 +1,38 @@
-export function range(start: number, stop?: number, step = 1): number[] {
-  if (stop === undefined) {
-    stop = start;
-    start = 0;
-  }
-  const result: number[] = [];
-  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
-    result.push(i);
-  }
+export type DataRecord = Record<string, unknown>;
+
+export const sanitizeData = (data: DataRecord[]): DataRecord[] => {
+  return data.map((item) => {
+    const cleaned: DataRecord = {};
+    for (const [key, value] of Object.entries(item)) {
+      if (value !== null && value !== undefined && value !== '') {
+        cleaned[key] = value;
+      }
+    }
+    return cleaned;
+  });
+};
+
+export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> => {
+  return array.reduce((acc, item) => {
+    const group = String(item[key]);
+    if (!acc[group]) {
+      acc[group] = [];
+    }
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
+};
+
+export const deepClone = <T>(obj: T): T => {
+  return JSON.parse(JSON.stringify(obj));
+};
+
+export const extractFields = <T, K extends keyof T>(obj: T, fields: K[]): Pick<T, K> => {
+  const result = {} as Pick<T, K>;
+  fields.forEach((field) => {
+    if (field in obj) {
+      result[field] = obj[field];
+    }
+  });
   return result;
-}
-
-export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
-  const minLength = Math.min(arr1.length, arr2.length);
-  const result: [T, U][] = [];
-  for (let i = 0; i < minLength; i++) {
-    result.push([arr1[i], arr2[i]]);
-  }
-  return result;
-}
-
-export function enumerate<T>(iterable: Iterable<T>, start = 0): [number, T][] {
-  const result: [number, T][] = [];
-  let index = start;
-  for (const item of iterable) {
-    result.push([index++, item]);
-  }
-  return result;
-}
-
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
-
-export function partition<T>(array: T[], predicate: (item: T) => boolean): [T[], T[]] {
-  const pass: T[] = [];
-  const fail: T[] = [];
-  for (const item of array) {
-    (predicate(item) ? pass : fail).push(item);
-  }
-  return [pass, fail];
-}
+};
