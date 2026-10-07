@@ -1,39 +1,41 @@
-export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
-
-export interface ScriptConfig {
-  readonly entryPoint: string;
-  readonly envVars: Record<string, string>;
-  readonly timeoutMs: number;
+export interface PythonConfig {
+  version: string;
+  virtualEnv: string;
+  isAsync: boolean;
 }
 
 export interface ExecutionResult {
-  readonly stdout: string;
-  readonly stderr: string;
-  readonly exitCode: number;
-  readonly durationMs: number;
+  output: string;
+  exitCode: number;
+  durationMs: number;
+}
+
+export type PythonCommand = string | string[];
+
+export interface RunnerOptions {
+  timeout?: number;
+  env?: Record<string, string>;
+  cwd?: string;
 }
 
 /**
- * Represents the interface for Python interpreter settings.
+ * Represents a standard error structure for script execution
  */
-export interface InterpreterSettings {
-  readonly path: string;
-  readonly version: PythonVersion;
-  readonly venvPath?: string;
+export class PythonExecutionError extends Error {
+  constructor(
+    public readonly code: number,
+    public readonly output: string,
+    message: string = 'Python execution failed'
+  ) {
+    super(message);
+    this.name = 'PythonExecutionError';
+  }
 }
 
-export type ProcessHandler = (result: ExecutionResult) => void;
+export type Nullable<T> = T | null | undefined;
 
-export interface ValidationResult {
-  readonly isValid: boolean;
-  readonly errors: ReadonlyArray<string>;
-}
-
-/**
- * Configuration for utility service initialization.
- */
-export interface ServiceConfiguration {
-  readonly cacheEnabled: boolean;
-  readonly maxRetries: number;
-  readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
+export interface DependencyManifest {
+  name: string;
+  version: string;
+  extras?: string[];
 }
