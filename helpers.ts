@@ -1,38 +1,25 @@
-export type DataRecord = Record<string, unknown>;
+export interface RetryOptions {
+  maxRetries?: number;
+  delayMs?: number;
+}
 
-export const sanitizeData = (data: DataRecord[]): DataRecord[] => {
-  return data.map((item) => {
-    const cleaned: DataRecord = {};
-    for (const [key, value] of Object.entries(item)) {
-      if (value !== null && value !== undefined && value !== '') {
-        cleaned[key] = value;
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const { maxRetries = 3, delayMs = 1000 } = options;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }
-    return cleaned;
-  });
-};
+  }
 
-export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> => {
-  return array.reduce((acc, item) => {
-    const group = String(item[key]);
-    if (!acc[group]) {
-      acc[group] = [];
-    }
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
-};
-
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
-
-export const extractFields = <T, K extends keyof T>(obj: T, fields: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  fields.forEach((field) => {
-    if (field in obj) {
-      result[field] = obj[field];
-    }
-  });
-  return result;
-};
+  throw lastError;
+}
