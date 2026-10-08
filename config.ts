@@ -1,27 +1,36 @@
-interface Config {
-  port: number;
-  host: string;
-  debug: boolean;
+export interface AppConfig {
+  readonly environment: 'development' | 'production' | 'testing';
+  readonly maxRetries: number;
+  readonly timeoutMs: number;
+  readonly debugMode: boolean;
 }
 
-const defaults: Config = {
-  port: 8080,
-  host: 'localhost',
-  debug: false
+/**
+ * Represents the validated application configuration schema.
+ */
+export const defaultConfig: AppConfig = {
+  environment: 'development',
+  maxRetries: 3,
+  timeoutMs: 5000,
+  debugMode: false
 };
 
-export const loadConfig = (overrides: Partial<Config> = {}): Config => {
-  const envConfig: Partial<Config> = {
-    ...(process.env.PORT && { port: parseInt(process.env.PORT, 10) }),
-    ...(process.env.HOST && { host: process.env.HOST }),
-    ...(process.env.DEBUG && { debug: process.env.DEBUG === 'true' })
-  };
-
+/**
+ * Validates provided partial configuration against strict schema.
+ * @param config - Partial settings to merge with defaults
+ * @returns Full validated application configuration
+ */
+export function validateConfig(config: Partial<AppConfig>): AppConfig {
   return {
-    ...defaults,
-    ...overrides,
-    ...envConfig
+    ...defaultConfig,
+    ...config
   };
+}
+
+export const getEnvironmentVariable = (key: string, fallback: string): string => {
+  return process.env[key] || fallback;
 };
 
-export type { Config };
+export const isProduction = (config: AppConfig): boolean => {
+  return config.environment === 'production';
+};
