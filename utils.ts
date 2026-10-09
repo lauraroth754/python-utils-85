@@ -1,24 +1,33 @@
-export interface RetryOptions {
-  attempts: number;
-  delay: number;
+import * as winston from 'winston';
+import 'winston-daily-rotate-file';
+
+export const createLogger = (name: string) => {
+  const transport = new winston.transports.DailyRotateFile({
+    filename: `logs/${name}-%DATE%.log`,
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d',
+  });
+
+  return winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    transports: [
+      transport,
+      new winston.transports.Console({
+        format: winston.format.simple(),
+      }),
+    ],
+  });
+};
+
+export interface LoggerConfig {
+  level: 'info' | 'error' | 'debug';
+  dir: string;
 }
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = { attempts: 3, delay: 1000 }
-): Promise<T> {
-  let lastError: Error;
-
-  for (let i = 0; i < options.attempts; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err as Error;
-      if (i < options.attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, options.delay));
-      }
-    }
-  }
-
-  throw lastError!;
-}
+export const defaultLogger = createLogger('app');
