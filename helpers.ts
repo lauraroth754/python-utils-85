@@ -1,41 +1,31 @@
-/**
- * Generates a sequence of numbers from start to stop by step.
- * Mimics Python's built-in range function.
- */
-export function* range(start: number, stop?: number, step: number = 1): Generator<number, void, unknown> {
-    const actualStart = stop === undefined ? 0 : start;
-    const actualStop = stop === undefined ? start : stop;
+export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
-    if (step === 0) {
-        throw new Error("ValueError: range() arg 3 must not be zero");
-    }
+export const deepClone = <T>(obj: T): T => {
+  return JSON.parse(JSON.stringify(obj));
+};
 
-    if (step > 0) {
-        for (let i = actualStart; i < actualStop; i += step) {
-            yield i;
-        }
-    } else {
-        for (let i = actualStart; i > actualStop; i += step) {
-            yield i;
-        }
-    }
-}
+export const sleep = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
-/**
- * Combines two arrays into an array of tuples up to the shorter length.
- */
-export function zip<T, U>(arr1: readonly T[], arr2: readonly U[]): [T, U][] {
-    const minLength = Math.min(arr1.length, arr2.length);
-    const result: [T, U][] = [];
-    for (let i = 0; i < minLength; i++) {
-        result.push([arr1[i], arr2[i]]);
-    }
-    return result;
-}
+export const chunk = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
 
-/**
- * Adds a counter to an iterable and returns it as an array of tuples.
- */
-export function enumerate<T>(arr: readonly T[], start: number = 0): [number, T][] {
-    return arr.map((value, index) => [start + index, value]);
-}
+export const isDefined = <T>(value: T | null | undefined): value is T => {
+  return value !== null && value !== undefined;
+};
+
+export const debounce = <T extends (...args: any[]) => void>(fn: T, ms: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), ms);
+  };
+};
+
+export const getOrElse = <T>(value: T | null | undefined, defaultValue: T): T => {
+  return isDefined(value) ? value : defaultValue;
+};
