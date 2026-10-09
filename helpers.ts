@@ -1,67 +1,41 @@
-export interface ProcessTask {
-  id: string;
-  payload: unknown;
-  timestamp: number;
-}
+/**
+ * Generates a sequence of numbers from start to stop by step.
+ * Mimics Python's built-in range function.
+ */
+export function* range(start: number, stop?: number, step: number = 1): Generator<number, void, unknown> {
+    const actualStart = stop === undefined ? 0 : start;
+    const actualStop = stop === undefined ? start : stop;
 
-export interface ValidatedPayload {
-  action: string;
-  data: Record<string, unknown>;
-  retryCount: number;
-}
-
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ValidationError";
-  }
-}
-
-export function validatePayload(payload: unknown): ValidatedPayload {
-  if (!payload || typeof payload !== "object") {
-    throw new ValidationError("Payload must be a non-null object");
-  }
-
-  const candidate = payload as Record<string, unknown>;
-
-  if (typeof candidate.action !== "string" || candidate.action.trim() === "") {
-    throw new ValidationError("Payload action must be a non-empty string");
-  }
-
-  if (!candidate.data || typeof candidate.data !== "object") {
-    throw new ValidationError("Payload data must be an object");
-  }
-
-  const retryCount = Number(candidate.retryCount ?? 0);
-  if (isNaN(retryCount) || retryCount < 0) {
-    throw new ValidationError("Payload retryCount must be a non-negative number");
-  }
-
-  return {
-    action: candidate.action,
-    data: candidate.data as Record<string, unknown>,
-    retryCount,
-  };
-}
-
-export function processBatch(tasks: ProcessTask[]): { success: string[]; failed: { id: string; error: string }[] } {
-  const success: string[] = [];
-  const failed: { id: string; error: string }[] = [];
-
-  for (const task of tasks) {
-    try {
-      if (!task.id) {
-        throw new ValidationError("Task is missing a valid identifier");
-      }
-      validatePayload(task.payload);
-      success.push(task.id);
-    } catch (error) {
-      failed.push({
-        id: task.id || "unknown",
-        error: error instanceof Error ? error.message : "Unknown validation error",
-      });
+    if (step === 0) {
+        throw new Error("ValueError: range() arg 3 must not be zero");
     }
-  }
 
-  return { success, failed };
+    if (step > 0) {
+        for (let i = actualStart; i < actualStop; i += step) {
+            yield i;
+        }
+    } else {
+        for (let i = actualStart; i > actualStop; i += step) {
+            yield i;
+        }
+    }
+}
+
+/**
+ * Combines two arrays into an array of tuples up to the shorter length.
+ */
+export function zip<T, U>(arr1: readonly T[], arr2: readonly U[]): [T, U][] {
+    const minLength = Math.min(arr1.length, arr2.length);
+    const result: [T, U][] = [];
+    for (let i = 0; i < minLength; i++) {
+        result.push([arr1[i], arr2[i]]);
+    }
+    return result;
+}
+
+/**
+ * Adds a counter to an iterable and returns it as an array of tuples.
+ */
+export function enumerate<T>(arr: readonly T[], start: number = 0): [number, T][] {
+    return arr.map((value, index) => [start + index, value]);
 }
