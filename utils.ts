@@ -1,69 +1,33 @@
-export interface CacheOptions {
-  maxSize?: number;
-  ttlMs?: number;
+export function memoize<T extends (...args: any[]) => any>(fn: T): T {
+  const cache = new Map<string, ReturnType<T>>();
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key)!;
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
 }
 
-interface CacheEntry<V> {
-  value: V;
-  expiresAt: number;
+export function debounce<T extends (...args: any[]) => void>(fn: T, wait: number): T {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return ((...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), wait);
+  }) as T;
 }
 
-export class LRUMemoCache<K extends string | number, V> {
-  private readonly cache = new Map<K, CacheEntry<V>>();
-  private readonly maxSize: number;
-  private readonly ttlMs: number;
+export function chunk<T>(array: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+}
 
-  constructor(options: CacheOptions = {}) {
-    this.maxSize = options.maxSize ?? 1000;
-    this.ttlMs = options.ttlMs ?? 0;
-  }
-
-  get(key: K): V | undefined {
-    const entry = this.cache.get(key);
-    if (!entry) return undefined;
-
-    if (this.ttlMs > 0 && Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
-      return undefined;
-    }
-
-    this.cache.delete(key);
-    this.cache.set(key, entry);
-    return entry.value;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
-    }
-
-    this.cache.set(key, {
-      value,
-      expiresAt: this.ttlMs > 0 ? Date.now() + this.ttlMs : Infinity,
-    });
-  }
-
-  memoize<T extends (...args: any[]) => V>(
-    fn: T,
-    keyGenerator?: (...args: Parameters<T>) => K
-  ): T {
-    return ((...args: Parameters<T>): V => {
-      const key = keyGenerator ? keyGenerator(...args) : (args[0] as K);
-      const cached = this.get(key);
-      if (cached !== undefined) return cached;
-
-      const result = fn(...args);
-      this.set(key, result);
-      return result;
-    }) as T;
-  }
-
-  clear(): void {
-    this.cache.clear();
+export class PerformanceTracker {
+  private marks = new Map<string, number>();
+  start(label: string): void { this.marks.set(label, performance.now()); }
+  end(label: string): number {
+    const start = this.marks.get(label) || 0;
+    return performance.now() - start;
   }
 }
