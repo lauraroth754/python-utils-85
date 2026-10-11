@@ -1,33 +1,27 @@
-export function memoize<T extends (...args: any[]) => any>(fn: T): T {
-  const cache = new Map<string, ReturnType<T>>();
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key)!;
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
-}
-
-export function debounce<T extends (...args: any[]) => void>(fn: T, wait: number): T {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return ((...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), wait);
-  }) as T;
-}
-
-export function chunk<T>(array: T[], size: number): T[][] {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+export const chunk = <T>(array: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
     array.slice(i * size, i * size + size)
   );
-}
 
-export class PerformanceTracker {
-  private marks = new Map<string, number>();
-  start(label: string): void { this.marks.set(label, performance.now()); }
-  end(label: string): number {
-    const start = this.marks.get(label) || 0;
-    return performance.now() - start;
-  }
-}
+export const debounce = <F extends (...args: any[]) => void>(fn: F, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+};
+
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
+
+export const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export const isDefined = <T>(val: T | null | undefined): val is T =>
+  val !== null && val !== undefined;
+
+export const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
