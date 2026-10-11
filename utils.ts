@@ -1,32 +1,31 @@
-interface ProcessConfig {
-  maxRetries: number;
-  timeout: number;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code?: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
 }
 
-export const processInput = (data: unknown, config: ProcessConfig): void => {
-  if (typeof data !== 'object' || data === null) {
-    throw new Error('invalid input data format');
+export const executePythonCommand = (command: string): string => {
+  if (!command || command.trim() === '') {
+    throw new PythonUtilsError('Empty command provided', 'ERR_EMPTY_CMD');
   }
 
-  if (typeof config.maxRetries !== 'number' || config.maxRetries < 0) {
-    throw new Error('invalid configuration parameters');
+  try {
+    const sanitized = command.replace(/[^a-zA-Z0-9\s-_]/g, '');
+    if (sanitized !== command) {
+      throw new PythonUtilsError('Invalid characters in command', 'ERR_INVALID_CHARS');
+    }
+    return `python -c "${sanitized}"`;
+  } catch (error) {
+    if (error instanceof PythonUtilsError) throw error;
+    throw new PythonUtilsError('Unexpected command parsing error', 'ERR_UNKNOWN');
   }
-
-  const input = data as Record<string, unknown>;
-
-  if (!('id' in input && typeof input.id === 'string')) {
-    throw new Error('missing required identifier field');
-  }
-
-  console.log(`processing entity ${input.id} with ${config.maxRetries} retries`);
 };
 
-export const runMainLoop = (items: unknown[], config: ProcessConfig): void => {
-  for (const item of items) {
-    try {
-      processInput(item, config);
-    } catch (err) {
-      console.error('validation failure in processing loop', err);
-    }
+export const parsePythonOutput = (output: string | null | undefined): string[] => {
+  if (output === null || output === undefined) {
+    return [];
   }
+  const lines = output.split('\n').filter((line) => line.trim().length > 0);
+  return lines.map((line) => line.trim());
 };
