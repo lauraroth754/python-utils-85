@@ -1,31 +1,35 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code?: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
+export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
+
+export interface ExecutionResult {
+  output: string;
+  exitCode: number;
 }
 
-export const executePythonCommand = (command: string): string => {
-  if (!command || command.trim() === '') {
-    throw new PythonUtilsError('Empty command provided', 'ERR_EMPTY_CMD');
-  }
+export const sanitizePath = (path: string): string => path.trim().replace(/\\/g, '/');
 
-  try {
-    const sanitized = command.replace(/[^a-zA-Z0-9\s-_]/g, '');
-    if (sanitized !== command) {
-      throw new PythonUtilsError('Invalid characters in command', 'ERR_INVALID_CHARS');
-    }
-    return `python -c "${sanitized}"`;
-  } catch (error) {
-    if (error instanceof PythonUtilsError) throw error;
-    throw new PythonUtilsError('Unexpected command parsing error', 'ERR_UNKNOWN');
-  }
+export const getPythonCommand = (version: PythonVersion): string => {
+  const commands: Record<PythonVersion, string> = {
+    '2.7': 'python2',
+    '3.8': 'python3.8',
+    '3.9': 'python3.9',
+    '3.10': 'python3.10',
+    '3.11': 'python3.11',
+    '3.12': 'python3.12',
+  };
+  return commands[version] || 'python3';
 };
 
-export const parsePythonOutput = (output: string | null | undefined): string[] => {
-  if (output === null || output === undefined) {
-    return [];
-  }
-  const lines = output.split('\n').filter((line) => line.trim().length > 0);
-  return lines.map((line) => line.trim());
+export const formatModulePath = (moduleName: string): string => {
+  return moduleName.split('.').join('/');
+};
+
+export const validateVersion = (version: string): version is PythonVersion => {
+  const valid: PythonVersion[] = ['2.7', '3.8', '3.9', '3.10', '3.11', '3.12'];
+  return valid.includes(version as PythonVersion);
+};
+
+export const parseOutput = (raw: string): ExecutionResult => {
+  const lines = raw.split('\n');
+  const exitCode = parseInt(lines.pop() || '0', 10);
+  return { output: lines.join('\n'), exitCode };
 };
