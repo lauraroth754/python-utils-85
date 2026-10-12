@@ -1,43 +1,29 @@
-export class ServiceError extends Error {
-  constructor(public message: string, public code: number) {
-    super(message);
-    this.name = 'ServiceError';
-  }
-}
+export const chunkArray = <T>(array: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
 
-export const safeExecute = async <T>(
-  fn: () => Promise<T>,
-  fallback: T
-): Promise<T> => {
+export const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), delay);
+  };
+};
+
+export const getObjectKeys = <T extends object>(obj: T): (keyof T)[] =>
+  Object.keys(obj) as (keyof T)[];
+
+export const safeJsonParse = <T>(value: string, fallback: T): T => {
   try {
-    return await fn();
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      console.error(`Service failure: ${error.code} - ${error.message}`);
-    } else {
-      console.error('Unexpected runtime error', error);
-    }
+    return JSON.parse(value);
+  } catch {
     return fallback;
   }
 };
 
-export const validateResponse = <T>(data: unknown): T => {
-  if (data === null || data === undefined) {
-    throw new ServiceError('Empty response payload', 400);
-  }
-  return data as T;
-};
+export const isNotEmpty = <T>(value: T | null | undefined): value is T =>
+  value !== null && value !== undefined && (typeof value !== 'string' || value.length > 0);
 
-export const processWithRetry = async <T>(
-  task: () => Promise<T>,
-  retries: number = 3
-): Promise<T> => {
-  try {
-    return await task();
-  } catch (err) {
-    if (retries > 0) {
-      return processWithRetry(task, retries - 1);
-    }
-    throw new ServiceError('Max retries exceeded', 503);
-  }
-};
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
