@@ -1,29 +1,64 @@
-export const chunkArray = <T>(array: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
+import { exec, ExecOptions } from 'child_process';
+import { promisify } from 'util';
 
-export const debounce = <F extends (...args: any[]) => void>(func: F, delay: number) => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  };
-};
+const execAsync = promisify(exec);
 
-export const getObjectKeys = <T extends object>(obj: T): (keyof T)[] =>
-  Object.keys(obj) as (keyof T)[];
+/** Configuration options for the Python service execution. */
+export interface PythonExecOptions {
+  /** Path to the Python executable. Defaults to 'python3'. */
+  pythonPath?: string;
+  /** Timeout in milliseconds before terminating the process. */
+  timeoutMs?: number;
+  /** Additional environment variables to pass to the process. */
+  env?: Record<string, string>;
+}
 
-export const safeJsonParse = <T>(value: string, fallback: T): T => {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
+/** Result object returned after running a Python command or script. */
+export interface PythonExecResult {
+  /** Captured standard output. */
+  stdout: string;
+  /** Captured standard error output. */
+  stderr: string;
+  /** Execution status flag. */
+  success: boolean;
+}
+
+/**
+ * Service to execute Python commands and scripts safely asynchronously.
+ */
+export class PythonProcessService {
+  private readonly pythonPath: string;
+  private readonly timeoutMs: number;
+
+  /**
+   * Initializes a new PythonProcessService instance.
+   * @param options Configuration settings for process execution.
+   */
+  constructor(options: PythonExecOptions = {}) {
+    this.pythonPath = options.pythonPath ?? 'python3';
+    this.timeoutMs = options.timeoutMs ?? 10000;
   }
-};
 
-export const isNotEmpty = <T>(value: T | null | undefined): value is T =>
-  value !== null && value !== undefined && (typeof value !== 'string' || value.length > 0);
+  /**
+   * Runs an inline Python code string and returns the execution result.
+   * @param code Python code string to execute.
+   * @returns Promise resolving to execution stdout, stderr, and status.
+   */
+  public async runCode(code: string): Promise<PythonExecResult> {
+    const escapedCode = code.replace(/"/g, '\\"');
+    const command = `${this.pythonPath} -c "${escapedCode}"`;
+    const opts: ExecOptions = { timeout: this.timeoutMs };
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+    try {
+      const { stdout, stderr } = await execAsync(command, opts);
+      return { stdout: stdout.trim(), stderr: stderr.trim(), success: true };
+    } catch (error: unknown) {
+      const err = error as { stdout?: string; stderr?: string; message?: string };
+      return {
+        stdout: err.stdout?.trim() ?? '',
+        stderr: err.stderr?.trim() ?? err.message ?? 'Unknown execution error',
+        success: false,
+      };
+    }
+  }
+}
