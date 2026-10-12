@@ -1,41 +1,32 @@
-export interface Config {
-  port: number;
-  host: string;
-  debug: boolean;
+export interface AppConfig {
+  readonly environment: 'development' | 'production' | 'staging';
+  readonly debug: boolean;
+  readonly timeout: number;
 }
 
-export const DEFAULTS: Config = {
-  port: 8080,
-  host: 'localhost',
-  debug: false,
-};
+/**
+ * Application configuration management utilities.
+ */
+export class ConfigManager {
+  private readonly config: AppConfig;
 
-export class ConfigLoader {
-  private config: Config;
-
-  constructor(overrides: Partial<Config> = {}) {
-    this.config = { ...DEFAULTS, ...overrides };
+  constructor(config: AppConfig) {
+    this.config = Object.freeze({ ...config });
   }
 
-  public get<K extends keyof Config>(key: K): Config[K] {
+  public get<K extends keyof AppConfig>(key: K): AppConfig[K] {
     return this.config[key];
   }
 
-  public all(): Config {
-    return Object.freeze({ ...this.config });
+  public isProduction(): boolean {
+    return this.config.environment === 'production';
   }
 
-  public static fromEnv(): ConfigLoader {
-    const overrides: Partial<Config> = {
-      port: process.env.PORT ? parseInt(process.env.PORT, 10) : undefined,
-      host: process.env.HOST,
-      debug: process.env.DEBUG === 'true',
-    };
-
-    const cleanOverrides = Object.fromEntries(
-      Object.entries(overrides).filter(([_, v]) => v !== undefined)
-    );
-
-    return new ConfigLoader(cleanOverrides as Partial<Config>);
+  public static createDefault(): ConfigManager {
+    return new ConfigManager({
+      environment: 'development',
+      debug: true,
+      timeout: 5000,
+    });
   }
 }
