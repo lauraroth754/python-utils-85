@@ -1,35 +1,28 @@
-export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
+import * as winston from 'winston';
+import 'winston-daily-rotate-file';
 
-export interface ExecutionResult {
-  output: string;
-  exitCode: number;
-}
+export const createLogger = (name: string) => {
+  const transport = new winston.transports.DailyRotateFile({
+    filename: `logs/${name}-%DATE%.log`,
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d'
+  });
 
-export const sanitizePath = (path: string): string => path.trim().replace(/\\/g, '/');
-
-export const getPythonCommand = (version: PythonVersion): string => {
-  const commands: Record<PythonVersion, string> = {
-    '2.7': 'python2',
-    '3.8': 'python3.8',
-    '3.9': 'python3.9',
-    '3.10': 'python3.10',
-    '3.11': 'python3.11',
-    '3.12': 'python3.12',
-  };
-  return commands[version] || 'python3';
+  return winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    transports: [
+      transport,
+      new winston.transports.Console({
+        format: winston.format.simple()
+      })
+    ]
+  });
 };
 
-export const formatModulePath = (moduleName: string): string => {
-  return moduleName.split('.').join('/');
-};
-
-export const validateVersion = (version: string): version is PythonVersion => {
-  const valid: PythonVersion[] = ['2.7', '3.8', '3.9', '3.10', '3.11', '3.12'];
-  return valid.includes(version as PythonVersion);
-};
-
-export const parseOutput = (raw: string): ExecutionResult => {
-  const lines = raw.split('\n');
-  const exitCode = parseInt(lines.pop() || '0', 10);
-  return { output: lines.join('\n'), exitCode };
-};
+export const logger = createLogger('app');
