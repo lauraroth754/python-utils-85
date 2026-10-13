@@ -1,41 +1,31 @@
-export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+export type PythonVersion = '2.7' | '3.8' | '3.9' | '3.10' | '3.11' | '3.12';
 
-/**
- * Recursively cleans an object by removing undefined keys.
- */
-export function sanitize(data: Record<string, any>): Record<string, JsonValue> {
-  const result: Record<string, JsonValue> = {};
-  for (const key in data) {
-    if (data[key] !== undefined) {
-      result[key] = data[key];
-    }
-  }
-  return result;
+export interface ExecutionResult {
+  output: string;
+  exitCode: number;
+  durationMs: number;
 }
 
-/**
- * Format a python-style snake_case string to camelCase.
- */
-export function toCamelCase(input: string): string {
-  return input.replace(/([-_][a-z])/gi, ($1) =>
-    $1.toUpperCase().replace('-', '').replace('_', '')
-  );
-}
+export const sanitizePath = (path: string): string => {
+  return path.replace(/\\/g, '/').replace(//+$/, '');
+};
 
-/**
- * Delay execution for a specified number of milliseconds.
- */
-export async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+export const formatCommand = (scriptPath: string, args: string[]): string => {
+  const sanitized = sanitizePath(scriptPath);
+  return `python3 ${sanitized} ${args.join(' ')}`.trim();
+};
 
-/**
- * Partition an array into chunks of a specific size.
- */
-export function chunk<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
-}
+export const validateVersion = (version: string): version is PythonVersion => {
+  const validVersions = ['2.7', '3.8', '3.9', '3.10', '3.11', '3.12'];
+  return validVersions.includes(version);
+};
+
+export const parseExecutionOutput = (raw: string): ExecutionResult => {
+  const lines = raw.split('\n');
+  const exitCode = parseInt(lines.pop() || '0', 10);
+  return {
+    output: lines.join('\n'),
+    exitCode: isNaN(exitCode) ? 1 : exitCode,
+    durationMs: 0
+  };
+};
