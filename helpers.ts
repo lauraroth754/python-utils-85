@@ -1,27 +1,29 @@
-export type PythonVersion = '2.7' | '3.8' | '3.11' | '3.12';
-
-export interface ExecutionContext {
-  venvPath: string;
-  version: PythonVersion;
-  timeout: number;
+export interface ProcessData {
+  id: string;
+  value: number;
+  timestamp: number;
 }
 
-export const getPythonExecutable = (ctx: ExecutionContext): string => {
-  return `${ctx.venvPath}/bin/python${ctx.version.split('.')[0]}`;
+export const validateProcessInput = (data: unknown): data is ProcessData => {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.id === 'string' &&
+    typeof d.value === 'number' &&
+    Number.isFinite(d.value) &&
+    typeof d.timestamp === 'number' &&
+    d.timestamp > 0
+  );
 };
 
-export const sanitizePath = (path: string): string => {
-  return path.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9/._-]/g, '');
-};
-
-export const createProcessArgs = (script: string, args: string[] = []): string[] => {
-  return [script, ...args.map(a => a.trim())];
-};
-
-export const validateEnv = (ctx: ExecutionContext): boolean => {
-  return !!ctx.venvPath && !!ctx.version;
-};
-
-export const formatCommand = (exec: string, args: string[]): string => {
-  return [exec, ...args].join(' ');
+export const runProcessingLoop = (items: unknown[]): ProcessData[] => {
+  const validItems: ProcessData[] = [];
+  for (const item of items) {
+    if (validateProcessInput(item)) {
+      validItems.push(item);
+    } else {
+      console.warn('Invalid item skipped:', item);
+    }
+  }
+  return validItems;
 };
