@@ -1,27 +1,27 @@
-export interface RetryOptions {
-  maxRetries?: number;
-  delayMs?: number;
-  backoffFactor?: number;
+export type PythonVersion = '2.7' | '3.8' | '3.11' | '3.12';
+
+export interface ExecutionContext {
+  venvPath: string;
+  version: PythonVersion;
+  timeout: number;
 }
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
-  const { maxRetries = 3, delayMs = 1000, backoffFactor = 2 } = options;
-  let lastError: unknown;
-  let currentDelay = delayMs;
+export const getPythonExecutable = (ctx: ExecutionContext): string => {
+  return `${ctx.venvPath}/bin/python${ctx.version.split('.')[0]}`;
+};
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt === maxRetries) break;
-      await new Promise((resolve) => setTimeout(resolve, currentDelay));
-      currentDelay *= backoffFactor;
-    }
-  }
+export const sanitizePath = (path: string): string => {
+  return path.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9/._-]/g, '');
+};
 
-  throw lastError;
-}
+export const createProcessArgs = (script: string, args: string[] = []): string[] => {
+  return [script, ...args.map(a => a.trim())];
+};
+
+export const validateEnv = (ctx: ExecutionContext): boolean => {
+  return !!ctx.venvPath && !!ctx.version;
+};
+
+export const formatCommand = (exec: string, args: string[]): string => {
+  return [exec, ...args].join(' ');
+};
