@@ -1,32 +1,44 @@
-export interface ProcessInput {
-  value: unknown;
-  priority: number;
+export interface ProcessResult {
+  status: number;
+  output: string;
+  error: string | null;
 }
 
-export const validateInput = (input: unknown): input is ProcessInput => {
-  return (
-    typeof input === 'object' &&
-    input !== null &&
-    'value' in input &&
-    typeof (input as ProcessInput).priority === 'number'
-  );
-};
+/**
+ * Executes a shell command and captures the output
+ */
+export async function runCommand(command: string, args: string[]): Promise<ProcessResult> {
+  const proc = Deno.run({
+    cmd: [command, ...args],
+    stdout: "piped",
+    stderr: "piped",
+  });
 
-export const processBatch = (items: unknown[]): void => {
-  for (const item of items) {
-    if (!validateInput(item)) {
-      throw new Error(`invalid input format: ${JSON.stringify(item)}`);
-    }
+  const [status, stdout, stderr] = await Promise.all([
+    proc.status(),
+    proc.output(),
+    proc.stderrOutput(),
+  ]);
 
-    const { value, priority } = item;
-    console.log(`processing ${value} with priority ${priority}`);
-  }
-};
+  proc.close();
 
-export const safeProcess = (data: unknown[]): void => {
-  try {
-    processBatch(data);
-  } catch (err) {
-    console.error('processing interrupted:', err);
-  }
-};
+  return {
+    status: status.code,
+    output: new TextDecoder().decode(stdout),
+    error: status.success ? null : new TextDecoder().decode(stderr),
+  };
+}
+
+/**
+ * Normalizes input strings by stripping whitespace
+ */
+export function sanitize(input: string): string {
+  return input.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Generates a unique identifier for processing tasks
+ */
+export function generateId(prefix: string = "py"): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
