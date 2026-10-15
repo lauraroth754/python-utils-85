@@ -1,29 +1,32 @@
-export interface ProcessData {
-  id: string;
-  value: number;
-  timestamp: number;
+export interface ProcessInput {
+  value: unknown;
+  priority: number;
 }
 
-export const validateProcessInput = (data: unknown): data is ProcessData => {
-  if (!data || typeof data !== 'object') return false;
-  const d = data as Record<string, unknown>;
+export const validateInput = (input: unknown): input is ProcessInput => {
   return (
-    typeof d.id === 'string' &&
-    typeof d.value === 'number' &&
-    Number.isFinite(d.value) &&
-    typeof d.timestamp === 'number' &&
-    d.timestamp > 0
+    typeof input === 'object' &&
+    input !== null &&
+    'value' in input &&
+    typeof (input as ProcessInput).priority === 'number'
   );
 };
 
-export const runProcessingLoop = (items: unknown[]): ProcessData[] => {
-  const validItems: ProcessData[] = [];
+export const processBatch = (items: unknown[]): void => {
   for (const item of items) {
-    if (validateProcessInput(item)) {
-      validItems.push(item);
-    } else {
-      console.warn('Invalid item skipped:', item);
+    if (!validateInput(item)) {
+      throw new Error(`invalid input format: ${JSON.stringify(item)}`);
     }
+
+    const { value, priority } = item;
+    console.log(`processing ${value} with priority ${priority}`);
   }
-  return validItems;
+};
+
+export const safeProcess = (data: unknown[]): void => {
+  try {
+    processBatch(data);
+  } catch (err) {
+    console.error('processing interrupted:', err);
+  }
 };
