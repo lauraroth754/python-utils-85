@@ -1,46 +1,32 @@
-export type Processor<T, R> = (item: T) => R;
+export type Primitive = string | number | boolean | null | undefined;
 
-export const memoize = <T, R>(fn: Processor<T, R>): Processor<T, R> => {
-  const cache = new Map<string, R>();
-  return (arg: T): R => {
-    const key = JSON.stringify(arg);
-    if (cache.has(key)) return cache.get(key)!;
-    const result = fn(arg);
-    cache.set(key, result);
-    return result;
-  };
-};
-
-export const batchProcess = async <T, R>(
-  items: T[],
-  processor: Processor<T, Promise<R>>,
-  concurrency: number = 5
-): Promise<R[]> => {
-  const results: R[] = [];
-  const executing: Promise<void>[] = [];
-
-  for (const item of items) {
-    const p = processor(item).then((res) => results.push(res));
-    executing.push(p);
-
-    if (executing.length >= concurrency) {
-      await Promise.race(executing);
-      const index = executing.findIndex((t) => t === Promise.race(executing));
-      executing.splice(index, 1);
+export const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, any> => {
+  return Object.keys(obj).reduce((acc, key) => {
+    const pre = prefix.length ? `${prefix}.` : '';
+    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+      Object.assign(acc, flattenObject(obj[key], pre + key));
+    } else {
+      acc[pre + key] = obj[key];
     }
-  }
-
-  await Promise.all(executing);
-  return results;
+    return acc;
+  }, {} as Record<string, any>);
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
-  fn: T,
-  delay: number
-): (...args: Parameters<T>) => void => {
-  let timeout: ReturnType<typeof setTimeout>;
+export const debounce = <T extends (...args: any[]) => void>(func: T, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
   };
+};
+
+export const range = (start: number, end: number, step = 1): number[] => {
+  return Array.from({ length: Math.ceil((end - start) / step) }, (_, i) => start + i * step);
+};
+
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  return keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
 };
