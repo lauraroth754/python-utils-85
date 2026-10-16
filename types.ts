@@ -1,41 +1,34 @@
-export interface PythonConfig {
-  version: string;
-  virtualEnv: string;
-  isAsync: boolean;
-}
-
-export interface ExecutionResult {
-  output: string;
-  exitCode: number;
-  durationMs: number;
-}
-
-export type PythonCommand = string | string[];
-
-export interface RunnerOptions {
-  timeout?: number;
-  env?: Record<string, string>;
-  cwd?: string;
-}
-
-/**
- * Represents a standard error structure for script execution
- */
-export class PythonExecutionError extends Error {
-  constructor(
-    public readonly code: number,
-    public readonly output: string,
-    message: string = 'Python execution failed'
-  ) {
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string, public details?: unknown) {
     super(message);
-    this.name = 'PythonExecutionError';
+    this.name = 'PythonUtilsError';
   }
 }
 
-export type Nullable<T> = T | null | undefined;
-
-export interface DependencyManifest {
-  name: string;
-  version: string;
-  extras?: string[];
+export interface ValidationResult<T> {
+  success: boolean;
+  data?: T;
+  error?: PythonUtilsError;
 }
+
+export const handleExecutionError = (err: unknown): PythonUtilsError => {
+  if (err instanceof PythonUtilsError) {
+    return err;
+  }
+  if (err instanceof Error) {
+    return new PythonUtilsError(err.message, 'INTERNAL_ERROR', err);
+  }
+  return new PythonUtilsError('An unknown error occurred', 'UNKNOWN_ERROR', err);
+};
+
+export const validateResponse = <T>(data: T | null | undefined): ValidationResult<T> => {
+  if (data === null || data === undefined) {
+    return {
+      success: false,
+      error: new PythonUtilsError('Data is null or undefined', 'INVALID_RESPONSE'),
+    };
+  }
+  return { success: true, data };
+};
+
+export type ErrorHandler = (err: unknown) => PythonUtilsError;
