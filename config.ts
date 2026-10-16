@@ -1,32 +1,26 @@
-export interface AppConfig {
-  readonly environment: 'development' | 'production' | 'staging';
-  readonly debug: boolean;
-  readonly timeout: number;
+import fs from 'fs';
+
+export interface Config {
+  port: number;
+  debug: boolean;
+  host: string;
 }
 
-/**
- * Application configuration management utilities.
- */
-export class ConfigManager {
-  private readonly config: AppConfig;
+const DEFAULTS: Config = {
+  port: 8080,
+  debug: false,
+  host: 'localhost',
+};
 
-  constructor(config: AppConfig) {
-    this.config = Object.freeze({ ...config });
-  }
-
-  public get<K extends keyof AppConfig>(key: K): AppConfig[K] {
-    return this.config[key];
-  }
-
-  public isProduction(): boolean {
-    return this.config.environment === 'production';
-  }
-
-  public static createDefault(): ConfigManager {
-    return new ConfigManager({
-      environment: 'development',
-      debug: true,
-      timeout: 5000,
-    });
+export function loadConfig(path: string): Config {
+  try {
+    if (!fs.existsSync(path)) return DEFAULTS;
+    const data = fs.readFileSync(path, 'utf-8');
+    const parsed = JSON.parse(data);
+    return { ...DEFAULTS, ...parsed };
+  } catch (error) {
+    return DEFAULTS;
   }
 }
+
+export const config = loadConfig('./config.json');
