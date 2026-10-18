@@ -1,52 +1,29 @@
-export function* range(start: number, stop?: number, step = 1): Generator<number> {
-  const begin = stop === undefined ? 0 : start;
-  const end = stop === undefined ? start : stop;
+export const chunk = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-  if (step === 0) {
-    throw new Error("range() step argument must not be zero");
-  }
+export const debounce = <F extends (...args: any[]) => any>(fn: F, ms: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), ms);
+  };
+};
 
-  if (step > 0) {
-    for (let i = begin; i < end; i += step) {
-      yield i;
-    }
-  } else {
-    for (let i = begin; i > end; i += step) {
-      yield i;
-    }
-  }
-}
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
 
-export function zip<T extends unknown[][]>(...arrays: T): Array<{ [K in keyof T]: T[K] extends Array<infer U> ? U : never }> {
-  if (arrays.length === 0) return [];
-  const minLen = Math.min(...arrays.map((arr) => arr.length));
-  const result: any[] = [];
-  for (let i = 0; i < minLen; i++) {
-    result.push(arrays.map((arr) => arr[i]));
-  }
-  return result;
-}
+export const wait = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-export function* enumerate<T>(iterable: Iterable<T>, start = 0): Generator<[number, T]> {
-  let index = start;
-  for (const item of iterable) {
-    yield [index++, item];
-  }
-}
-
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
-
-export function dictFromKeys<K extends PropertyKey, V>(keys: K[], defaultValue: V): Record<K, V> {
-  const result = {} as Record<K, V>;
-  for (const key of keys) {
-    result[key] = defaultValue;
-  }
-  return result;
-}
+export const groupBy = <T>(arr: T[], key: keyof T): Record<string, T[]> =>
+  arr.reduce((acc, item) => {
+    const group = String(item[key]);
+    acc[group] = acc[group] || [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
