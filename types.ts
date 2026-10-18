@@ -1,34 +1,43 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string, public details?: unknown) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
+/**
+ * Generic result wrapper representing either a successful outcome or an error.
+ */
+export type Result<T, E = Error> =
+  | { success: true; value: T }
+  | { success: false; error: E };
+
+/**
+ * Options for configuring retry behavior in asynchronous operations.
+ */
+export interface RetryOptions {
+  /** Maximum number of retry attempts. */
+  maxRetries: number;
+  /** Initial delay between retries in milliseconds. */
+  delayMs: number;
+  /** Backoff multiplier for exponential delay calculation. */
+  backoffFactor?: number;
 }
 
-export interface ValidationResult<T> {
-  success: boolean;
-  data?: T;
-  error?: PythonUtilsError;
-}
+/**
+ * Dictionary type mapping string keys to generic values.
+ */
+export type PyDict<V = unknown> = Record<string, V>;
 
-export const handleExecutionError = (err: unknown): PythonUtilsError => {
-  if (err instanceof PythonUtilsError) {
-    return err;
-  }
-  if (err instanceof Error) {
-    return new PythonUtilsError(err.message, 'INTERNAL_ERROR', err);
-  }
-  return new PythonUtilsError('An unknown error occurred', 'UNKNOWN_ERROR', err);
-};
+/**
+ * Primitive Python-like types supported by utility serializers.
+ */
+export type PyPrimitive = string | number | boolean | null | undefined;
 
-export const validateResponse = <T>(data: T | null | undefined): ValidationResult<T> => {
-  if (data === null || data === undefined) {
-    return {
-      success: false,
-      error: new PythonUtilsError('Data is null or undefined', 'INVALID_RESPONSE'),
-    };
-  }
-  return { success: true, data };
-};
+/**
+ * Read-only sequence wrapper mimicking immutable tuple behavior.
+ */
+export type PySequence<T> = ReadonlyArray<T>;
 
-export type ErrorHandler = (err: unknown) => PythonUtilsError;
+/**
+ * Callback signature for mapping and transforming sequence elements.
+ */
+export type TransformFn<T, U> = (item: T, index: number) => U;
+
+/**
+ * Predicate signature for filtering sequence items.
+ */
+export type PredicateFn<T> = (item: T, index: number) => boolean;
