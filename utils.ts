@@ -1,35 +1,39 @@
-export type Processor<T, R> = (input: T) => R;
+import * as fs from 'fs';
+import * as path from 'path';
 
-export class MemoizedExecutor {
-  private cache: Map<string, any> = new Map();
-
-  public execute<T, R>(key: string, fn: Processor<T, R>, input: T): R {
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
-    }
-    const result = fn(input);
-    this.cache.set(key, result);
-    return result;
-  }
-
-  public clear(): void {
-    this.cache.clear();
-  }
+interface LoggerConfig {
+  filename: string;
+  maxSizeBytes: number;
+  maxBackups: number;
 }
 
-export const batchProcess = <T, R>(items: T[], processor: Processor<T, R>, batchSize: number = 100): R[] => {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const chunk = items.slice(i, i + batchSize);
-    results.push(...chunk.map(processor));
-  }
-  return results;
-};
+export class RotatingLogger {
+  private path: string;
+  private maxSize: number;
+  private maxBackups: number;
 
-export const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
-};
+  constructor(config: LoggerConfig) {
+    this.path = config.filename;
+    this.maxSize = config.maxSizeBytes;
+    this.maxBackups = config.maxBackups;
+  }
+
+  private rotate(): void {
+    for (let i = this.maxBackups - 1; i > 0; i--) {
+      const oldFile = `${this.path}.${i}`;
+      const newFile = `${this.path}.${i + 1}`;
+      if (fs.existsSync(oldFile)) fs.renameSync(oldFile, newFile);
+    }
+    fs.renameSync(this.path, `${this.path}.1`);
+  }
+
+  public log(message: string): void {
+    if (fs.existsSync(this.path)) {
+      const stats = fs.statSync(this.path);
+      if (stats.size >= this.maxSize) this.rotate();
+    }
+
+    const entry = `[${new Date().toISOString()}] ${message}\n`;
+    fs.appendFileSync(this.path, entry, 'utf8');
+  }
+}
