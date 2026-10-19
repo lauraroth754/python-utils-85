@@ -1,37 +1,33 @@
-export class MemoizedService {
-  private cache: Map<string, any> = new Map();
+export type DataMap<T = unknown> = Record<string, T>;
 
-  async executeOptimized<T>(key: string, fn: () => Promise<T>, ttl: number = 5000): Promise<T> {
-    if (this.cache.has(key)) {
-      const entry = this.cache.get(key);
-      if (Date.now() - entry.timestamp < ttl) {
-        return entry.data;
-      }
-      this.cache.delete(key);
+export const sanitizeData = <T extends DataMap>(data: T): T => {
+  const sanitized = { ...data };
+  for (const key in sanitized) {
+    if (sanitized[key] === null || sanitized[key] === undefined) {
+      delete sanitized[key];
     }
-
-    const data = await fn();
-    this.cache.set(key, { data, timestamp: Date.now() });
-    return data;
   }
+  return sanitized;
+};
 
-  clearCache(): void {
-    this.cache.clear();
-  }
-}
+export const groupBy = <T>(array: T[], key: keyof T): Map<T[keyof T], T[]> => {
+  return array.reduce((map, item) => {
+    const value = item[key];
+    const collection = map.get(value) ?? [];
+    collection.push(item);
+    map.set(value, collection);
+    return map;
+  }, new Map<T[keyof T], T[]>());
+};
 
-export const batchProcess = <T, R>(items: T[], fn: (batch: T[]) => Promise<R[]>, size: number = 10): Promise<R[]> => {
-  const results: R[] = [];
-  const queue = [...items];
-  
-  const process = async (): Promise<R[]> => {
-    while (queue.length > 0) {
-      const batch = queue.splice(0, size);
-      const res = await fn(batch);
-      results.push(...res);
+export const deepClone = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
+  const result = { ...obj } as T;
+  for (const key in result) {
+    if (Object.prototype.hasOwnProperty.call(result, key)) {
+      result[key] = deepClone(result[key]);
     }
-    return results;
-  };
-
-  return process();
+  }
+  return result;
 };
