@@ -1,51 +1,31 @@
-export interface DataPayload {
-  id: string;
-  value: number;
-  tags?: string[];
+export class ServiceError extends Error {
+  constructor(public message: string, public code: number) {
+    super(message);
+    this.name = 'ServiceError';
+  }
 }
 
-export interface ValidationResult {
-  valid: boolean;
-  errors: string[];
-}
-
-export function validatePayload(data: unknown): ValidationResult {
-  const errors: string[] = [];
-  if (!data || typeof data !== 'object') {
-    return { valid: false, errors: ['Input must be a non-null object'] };
-  }
-
-  const obj = data as Record<string, unknown>;
-  if (typeof obj.id !== 'string' || obj.id.trim() === '') {
-    errors.push('Field "id" must be a non-empty string');
-  }
-
-  if (typeof obj.value !== 'number' || Number.isNaN(obj.value)) {
-    errors.push('Field "value" must be a valid number');
-  }
-
-  if (obj.tags !== undefined && !Array.isArray(obj.tags)) {
-    errors.push('Field "tags" must be an array of strings if provided');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
-
-export function processBatch(items: unknown[]): { processed: DataPayload[]; skipped: number } {
-  const processed: DataPayload[] = [];
-  let skipped = 0;
-
-  for (const item of items) {
-    const validation = validatePayload(item);
-    if (!validation.valid) {
-      skipped++;
-      continue;
+export async function safeExecute<T>(fn: () => Promise<T>): Promise<T | null> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      console.error(`[ServiceError ${error.code}]: ${error.message}`);
+      return null;
     }
-    processed.push(item as DataPayload);
+    console.error('Unexpected system failure:', error);
+    throw error;
   }
+}
 
-  return { processed, skipped };
+export function validatePayload(data: unknown): boolean {
+  if (data === null || typeof data !== 'object') return false;
+  return 'id' in data && 'timestamp' in data;
+}
+
+export async function processRequest(data: unknown): Promise<string> {
+  if (!validatePayload(data)) {
+    throw new ServiceError('Invalid request schema', 400);
+  }
+  return 'success';
 }
