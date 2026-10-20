@@ -1,33 +1,44 @@
-export type DataMap<T = unknown> = Record<string, T>;
+export interface ProcessResult {
+  success: boolean;
+  data: any;
+  error: string | null;
+}
 
-export const sanitizeData = <T extends DataMap>(data: T): T => {
-  const sanitized = { ...data };
-  for (const key in sanitized) {
-    if (sanitized[key] === null || sanitized[key] === undefined) {
-      delete sanitized[key];
+export interface ServiceConfig {
+  timeout: number;
+  retries: number;
+}
+
+/**
+ * Executes a data processing task with configurable parameters.
+ */
+export const executeTask = async (payload: Record<string, any>, config: ServiceConfig): Promise<ProcessResult> => {
+  try {
+    const response = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(config.timeout),
+    });
+
+    if (!response.ok) {
+      return { success: false, data: null, error: `Status ${response.status}` };
     }
+
+    const data = await response.json();
+    return { success: true, data, error: null };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      data: null,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    };
   }
-  return sanitized;
 };
 
-export const groupBy = <T>(array: T[], key: keyof T): Map<T[keyof T], T[]> => {
-  return array.reduce((map, item) => {
-    const value = item[key];
-    const collection = map.get(value) ?? [];
-    collection.push(item);
-    map.set(value, collection);
-    return map;
-  }, new Map<T[keyof T], T[]>());
-};
-
-export const deepClone = <T>(obj: T): T => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
-  const result = { ...obj } as T;
-  for (const key in result) {
-    if (Object.prototype.hasOwnProperty.call(result, key)) {
-      result[key] = deepClone(result[key]);
-    }
-  }
-  return result;
+/**
+ * Formats processing results into standard output structure.
+ */
+export const formatResult = (result: ProcessResult): string => {
+  return result.success ? `Success: ${JSON.stringify(result.data)}` : `Failure: ${result.error}`;
 };
