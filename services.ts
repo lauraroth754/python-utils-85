@@ -1,44 +1,51 @@
-export interface ProcessResult {
-  success: boolean;
-  data: any;
-  error: string | null;
+export interface DataPayload {
+  id: string;
+  value: number;
+  tags?: string[];
 }
 
-export interface ServiceConfig {
-  timeout: number;
-  retries: number;
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
 }
 
-/**
- * Executes a data processing task with configurable parameters.
- */
-export const executeTask = async (payload: Record<string, any>, config: ServiceConfig): Promise<ProcessResult> => {
-  try {
-    const response = await fetch('/api/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(config.timeout),
-    });
-
-    if (!response.ok) {
-      return { success: false, data: null, error: `Status ${response.status}` };
-    }
-
-    const data = await response.json();
-    return { success: true, data, error: null };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      data: null,
-      error: err instanceof Error ? err.message : 'Unknown error',
-    };
+export function validatePayload(data: unknown): ValidationResult {
+  const errors: string[] = [];
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: ['Input must be a non-null object'] };
   }
-};
 
-/**
- * Formats processing results into standard output structure.
- */
-export const formatResult = (result: ProcessResult): string => {
-  return result.success ? `Success: ${JSON.stringify(result.data)}` : `Failure: ${result.error}`;
-};
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || obj.id.trim() === '') {
+    errors.push('Field "id" must be a non-empty string');
+  }
+
+  if (typeof obj.value !== 'number' || Number.isNaN(obj.value)) {
+    errors.push('Field "value" must be a valid number');
+  }
+
+  if (obj.tags !== undefined && !Array.isArray(obj.tags)) {
+    errors.push('Field "tags" must be an array of strings if provided');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+export function processBatch(items: unknown[]): { processed: DataPayload[]; skipped: number } {
+  const processed: DataPayload[] = [];
+  let skipped = 0;
+
+  for (const item of items) {
+    const validation = validatePayload(item);
+    if (!validation.valid) {
+      skipped++;
+      continue;
+    }
+    processed.push(item as DataPayload);
+  }
+
+  return { processed, skipped };
+}
