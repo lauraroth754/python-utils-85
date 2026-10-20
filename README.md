@@ -1,63 +1,47 @@
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 # python-utils-85
 
-`python-utils-85` provides a set of type-safe utilities for managing Python subprocesses, virtual environments, and cross-runtime data serialization within Node.js and TypeScript applications. It simplifies mixed-stack operations by handling Python environment detection, script execution, and output parsing seamlessly.
+A collection of lightweight TypeScript utility functions designed to streamline common data transformation and validation tasks. This library focuses on providing robust, type-safe helpers that eliminate boilerplate in daily development.
 
 ## Features
 
-- **Virtual Environment Management:** Automatically locate, create, and validate local `.venv` or Conda environments from your TypeScript codebase.
-- **Typed Subprocess Runner:** Execute external Python scripts or inline code snippets asynchronously with native JSON object stdout auto-parsing.
-- **PyPI Metadata Fetcher:** Query package specs, version histories, and wheel metadata directly using lightweight HTTP helpers.
-- **Data Structure Serializer:** Convert complex TypeScript primitives into valid Python literal syntax for dynamic script generation.
+*   **Type-Safe Object Deep Merge:** Effortlessly merge nested configuration objects without losing type definitions.
+*   **Performance-Optimized Debouncer:** A high-precision utility for handling rapid event inputs with built-in execution cancellation.
+*   **Robust Date Formatting:** Streamlined helpers for parsing ISO strings into locale-specific, human-readable formats.
+*   **Strict Type Guards:** Essential runtime validation functions to ensure data integrity before processing external API responses.
 
 ## Installation
 
-Install the package via npm:
+Install the package via npm or yarn:
 
 ```bash
 npm install python-utils-85
-```
-
-Or using pnpm:
-
-```bash
-pnpm add python-utils-85
+# or
+yarn add python-utils-85
 ```
 
 ## Basic Usage
 
-The following example demonstrates how to verify a virtual environment and execute a Python script with structured inputs:
+Import the utilities directly into your project files to begin optimizing your workflow:
 
 ```typescript
-import { PythonRunner, VenvManager } from 'python-utils-85';
+import { deepMerge, debounce } from 'python-utils-85';
 
-async function executePipeline() {
-  const venv = new VenvManager({ path: './.venv' });
-  
-  if (!await venv.exists()) {
-    await venv.create({ pythonVersion: '3.10' });
-  }
+// Example: Merging configuration objects
+const baseConfig = { api: { timeout: 5000, retries: 3 } };
+const userConfig = { api: { timeout: 10000 } };
+const finalConfig = deepMerge(baseConfig, userConfig);
 
-  const runner = new PythonRunner({ 
-    pythonPath: venv.getExecutablePath() 
-  });
+// Example: Debouncing a search input handler
+const handleSearch = debounce((query: string) => {
+  console.log('Fetching results for:', query);
+}, 300);
 
-  const response = await runner.runScript<{ status: string; processedCount: number }>(
-    './scripts/transform.py',
-    {
-      args: ['--batch-size', '64'],
-      inputData: { items: [1, 2, 3, 4, 5] }
-    }
-  );
-
-  console.log(`Execution status: ${response.data.status}`);
-  console.log(`Items processed: ${response.data.processedCount}`);
-}
-
-executePipeline();
+// Use in event listeners
+inputElement.addEventListener('input', (e) => handleSearch(e.target.value));
 ```
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+Distributed under the MIT License. See `LICENSE` for more information.
