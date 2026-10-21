@@ -1,31 +1,40 @@
-export class ServiceError extends Error {
-  constructor(public message: string, public code: number) {
-    super(message);
-    this.name = 'ServiceError';
-  }
+export interface ProcessingConfig {
+  inputPath: string;
+  batchSize: number;
+  timeout: number;
 }
 
-export async function safeExecute<T>(fn: () => Promise<T>): Promise<T | null> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      console.error(`[ServiceError ${error.code}]: ${error.message}`);
-      return null;
+export const validateConfig = (config: unknown): config is ProcessingConfig => {
+  if (typeof config !== 'object' || config === null) return false;
+  const c = config as Record<string, unknown>;
+  return (
+    typeof c.inputPath === 'string' &&
+    typeof c.batchSize === 'number' &&
+    c.batchSize > 0 &&
+    typeof c.timeout === 'number' &&
+    c.timeout >= 0
+  );
+};
+
+export const processData = (config: unknown): void => {
+  if (!validateConfig(config)) {
+    throw new Error('invalid processing configuration provided');
+  }
+
+  const { inputPath, batchSize, timeout } = config;
+  console.log(`processing ${inputPath} with batch size ${batchSize}`);
+
+  setTimeout(() => {
+    console.log('processing complete');
+  }, timeout);
+};
+
+export const runMainLoop = (configs: unknown[]): void => {
+  configs.forEach((cfg) => {
+    try {
+      processData(cfg);
+    } catch (err) {
+      console.error(`skipping invalid config: ${(err as Error).message}`);
     }
-    console.error('Unexpected system failure:', error);
-    throw error;
-  }
-}
-
-export function validatePayload(data: unknown): boolean {
-  if (data === null || typeof data !== 'object') return false;
-  return 'id' in data && 'timestamp' in data;
-}
-
-export async function processRequest(data: unknown): Promise<string> {
-  if (!validatePayload(data)) {
-    throw new ServiceError('Invalid request schema', 400);
-  }
-  return 'success';
-}
+  });
+};
