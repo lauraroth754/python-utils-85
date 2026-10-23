@@ -8,34 +8,38 @@ export class ConfigError extends Error {
 export interface AppConfig {
   host: string;
   port: number;
+  debug: boolean;
 }
 
-export const validateConfig = (config: unknown): AppConfig => {
-  if (!config || typeof config !== 'object') {
-    throw new ConfigError('Invalid configuration object', 'INVALID_TYPE');
+export const loadConfig = (data: unknown): AppConfig => {
+  if (typeof data !== 'object' || data === null) {
+    throw new ConfigError('Invalid configuration object', 'ERR_INVALID_TYPE');
   }
 
-  const { host, port } = config as Partial<AppConfig>;
+  const config = data as Record<string, unknown>;
 
-  if (typeof host !== 'string' || host.length === 0) {
-    throw new ConfigError('Host must be a non-empty string', 'INVALID_HOST');
+  if (typeof config.host !== 'string' || !config.host) {
+    throw new ConfigError('Missing or invalid host', 'ERR_INVALID_HOST');
   }
 
-  if (typeof port !== 'number' || port < 1 || port > 65535) {
-    throw new ConfigError('Port must be a valid number between 1 and 65535', 'INVALID_PORT');
+  if (typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
+    throw new ConfigError('Invalid port range', 'ERR_INVALID_PORT');
   }
 
-  return { host, port };
+  return {
+    host: config.host,
+    port: config.port,
+    debug: typeof config.debug === 'boolean' ? config.debug : false
+  };
 };
 
-export const loadConfig = (raw: string): AppConfig => {
+export const safeLoadConfig = (data: unknown): AppConfig | null => {
   try {
-    const parsed = JSON.parse(raw);
-    return validateConfig(parsed);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new ConfigError('Malformed JSON configuration', 'PARSE_FAILURE');
+    return loadConfig(data);
+  } catch (err) {
+    if (err instanceof ConfigError) {
+      console.error(`[${err.code}] ${err.message}`);
     }
-    throw error;
+    return null;
   }
 };
