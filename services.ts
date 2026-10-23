@@ -1,39 +1,51 @@
-export class ServiceError extends Error {
-  constructor(public message: string, public code: number) {
-    super(message);
-    this.name = 'ServiceError';
+export class StringService {
+  static slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  static truncate(str: string, length: number, ending = '...'): string {
+    if (str.length <= length) return str;
+    return str.substring(0, length - ending.length) + ending;
   }
 }
 
-export const safeExecute = async <T>(
-  operation: () => Promise<T>,
-  fallback: T
-): Promise<T> => {
-  try {
-    return await operation();
-  } catch (error) {
-    if (error instanceof ServiceError) {
-      console.error(`Service failure [${error.code}]: ${error.message}`);
-    } else {
-      console.error('Unexpected execution failure:', error);
+export class ObjectService {
+  static omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+    const result = { ...obj };
+    for (const key of keys) {
+      delete result[key];
     }
-    return fallback;
+    return result;
   }
-};
 
-export const validateData = (data: unknown): boolean => {
-  if (data === null || typeof data !== 'object') return false;
-  return Object.keys(data).length > 0;
-};
+  static pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+    const result = {} as Pick<T, K>;
+    for (const key of keys) {
+      if (key in obj) {
+        result[key] = obj[key];
+      }
+    }
+    return result;
+  }
+}
 
-export const fetchData = async (url: string): Promise<Record<string, any>> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new ServiceError('Network request failed', response.status);
+export class AsyncService {
+  static sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
-  const data = await response.json();
-  if (!validateData(data)) {
-    throw new ServiceError('Invalid response payload', 422);
+
+  static async retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      if (retries <= 0) throw error;
+      await AsyncService.sleep(delay);
+      return AsyncService.retry(fn, retries - 1, delay);
+    }
   }
-  return data;
-};
+}
