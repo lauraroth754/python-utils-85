@@ -1,45 +1,50 @@
-export class ConfigError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'ConfigError';
-  }
-}
-
 export interface AppConfig {
   host: string;
   port: number;
+  timeout: number;
   debug: boolean;
+  retries: number;
+  [key: string]: unknown;
 }
 
-export const loadConfig = (data: unknown): AppConfig => {
-  if (typeof data !== 'object' || data === null) {
-    throw new ConfigError('Invalid configuration object', 'ERR_INVALID_TYPE');
-  }
-
-  const config = data as Record<string, unknown>;
-
-  if (typeof config.host !== 'string' || !config.host) {
-    throw new ConfigError('Missing or invalid host', 'ERR_INVALID_HOST');
-  }
-
-  if (typeof config.port !== 'number' || config.port < 1 || config.port > 65535) {
-    throw new ConfigError('Invalid port range', 'ERR_INVALID_PORT');
-  }
-
-  return {
-    host: config.host,
-    port: config.port,
-    debug: typeof config.debug === 'boolean' ? config.debug : false
-  };
+export const DEFAULT_CONFIG: AppConfig = {
+  host: '127.0.0.1',
+  port: 8000,
+  timeout: 5000,
+  debug: false,
+  retries: 3,
 };
 
-export const safeLoadConfig = (data: unknown): AppConfig | null => {
-  try {
-    return loadConfig(data);
-  } catch (err) {
-    if (err instanceof ConfigError) {
-      console.error(`[${err.code}] ${err.message}`);
+export class ConfigLoader<T extends Record<string, unknown>> {
+  private config: T;
+
+  constructor(defaults: T, overrides?: Partial<T>) {
+    this.config = { ...defaults, ...overrides };
+  }
+
+  public get<K extends keyof T>(key: K): T[K] {
+    return this.config[key];
+  }
+
+  public set<K extends keyof T>(key: K, value: T[K]): void {
+    this.config[key] = value;
+  }
+
+  public loadFromObject(overrides: Partial<T>): T {
+    this.config = { ...this.config, ...overrides };
+    return this.getAll();
+  }
+
+  public loadFromJSON(jsonString: string): T {
+    try {
+      const parsed = JSON.parse(jsonString) as Partial<T>;
+      return this.loadFromObject(parsed);
+    } catch {
+      throw new Error('Failed to parse configuration JSON');
     }
-    return null;
   }
-};
+
+  public getAll(): T {
+    return { ...this.config };
+  }
+}
