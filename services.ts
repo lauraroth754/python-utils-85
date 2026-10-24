@@ -1,51 +1,32 @@
-export class StringService {
-  static slugify(text: string): string {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
+export class MemoizedService {
+  private cache: Map<string, any> = new Map();
+  private readonly ttl: number = 5000;
 
-  static truncate(str: string, length: number, ending = '...'): string {
-    if (str.length <= length) return str;
-    return str.substring(0, length - ending.length) + ending;
-  }
-}
-
-export class ObjectService {
-  static omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
-    const result = { ...obj };
-    for (const key of keys) {
-      delete result[key];
+  public async executeTask<T>(key: string, task: () => Promise<T>): Promise<T> {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp < this.ttl)) {
+      return cached.data;
     }
-    return result;
+
+    const data = await task();
+    this.cache.set(key, { data, timestamp: Date.now() });
+    return data;
   }
 
-  static pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
-    const result = {} as Pick<T, K>;
-    for (const key of keys) {
-      if (key in obj) {
-        result[key] = obj[key];
-      }
-    }
-    return result;
-  }
-}
-
-export class AsyncService {
-  static sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  static async retry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
-    try {
-      return await fn();
-    } catch (error) {
-      if (retries <= 0) throw error;
-      await AsyncService.sleep(delay);
-      return AsyncService.retry(fn, retries - 1, delay);
+  public clearCache(key?: string): void {
+    if (key) {
+      this.cache.delete(key);
+    } else {
+      this.cache.clear();
     }
   }
 }
+
+export const batchProcess = <T, R>(items: T[], processor: (item: T) => R, chunkSize: number = 100): R[] => {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    results.push(...chunk.map(processor));
+  }
+  return results;
+};
