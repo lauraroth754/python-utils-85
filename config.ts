@@ -1,50 +1,31 @@
 export interface AppConfig {
-  host: string;
-  port: number;
-  timeout: number;
+  version: string;
   debug: boolean;
-  retries: number;
-  [key: string]: unknown;
+  timeoutMs: number;
+  retryAttempts: number;
 }
 
-export const DEFAULT_CONFIG: AppConfig = {
-  host: '127.0.0.1',
-  port: 8000,
-  timeout: 5000,
+export const defaultConfig: AppConfig = {
+  version: '1.0.0',
   debug: false,
-  retries: 3,
+  timeoutMs: 5000,
+  retryAttempts: 3,
 };
 
-export class ConfigLoader<T extends Record<string, unknown>> {
-  private config: T;
+/**
+ * Merges partial user configuration with application defaults
+ */
+export function createConfig(overrides: Partial<AppConfig>): AppConfig {
+  return { ...defaultConfig, ...overrides };
+}
 
-  constructor(defaults: T, overrides?: Partial<T>) {
-    this.config = { ...defaults, ...overrides };
-  }
-
-  public get<K extends keyof T>(key: K): T[K] {
-    return this.config[key];
-  }
-
-  public set<K extends keyof T>(key: K, value: T[K]): void {
-    this.config[key] = value;
-  }
-
-  public loadFromObject(overrides: Partial<T>): T {
-    this.config = { ...this.config, ...overrides };
-    return this.getAll();
-  }
-
-  public loadFromJSON(jsonString: string): T {
-    try {
-      const parsed = JSON.parse(jsonString) as Partial<T>;
-      return this.loadFromObject(parsed);
-    } catch {
-      throw new Error('Failed to parse configuration JSON');
-    }
-  }
-
-  public getAll(): T {
-    return { ...this.config };
-  }
+/**
+ * Validates the provided configuration object for required values
+ */
+export function validateConfig(config: AppConfig): boolean {
+  return (
+    typeof config.timeoutMs === 'number' &&
+    config.timeoutMs > 0 &&
+    typeof config.retryAttempts === 'number'
+  );
 }
