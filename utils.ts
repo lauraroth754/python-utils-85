@@ -1,54 +1,50 @@
-export class FastCache<K, V> {
-  private cache: Map<K, V> = new Map();
-  private readonly maxSize: number;
-
-  constructor(maxSize: number = 1000) {
-    this.maxSize = maxSize;
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-
-  public get(key: K): V | undefined {
-    const item = this.cache.get(key);
-    if (item !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, item);
-    }
-    return item;
+  if ((step > 0 && start >= stop) || (step < 0 && start <= stop) || step === 0) {
+    return [];
   }
-
-  public set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
-      }
-    }
-    this.cache.set(key, value);
+  const result: number[] = [];
+  for (let i = start; step > 0 ? i < stop : i > stop; i += step) {
+    result.push(i);
   }
-
-  public clear(): void {
-    this.cache.clear();
-  }
-
-  public get size(): number {
-    return this.cache.size;
-  }
+  return result;
 }
 
-export function memoize<T extends (...args: any[]) => any>(
-  fn: T,
-  capacity = 500
-): T {
-  const cache = new FastCache<string, ReturnType<T>>(capacity);
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    const cached = cache.get(key);
-    if (cached !== undefined) {
-      return cached;
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
+  const length = Math.min(arr1.length, arr2.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < length; i++) {
+    result.push([arr1[i], arr2[i]]);
+  }
+  return result;
+}
+
+export function chunk<T>(arr: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+}
+
+export function clamp(val: number, min: number, max: number): number {
+  return Math.min(Math.max(val, min), max);
+}
+
+export function groupBy<T, K extends string | number | symbol>(
+  arr: T[],
+  keyFn: (item: T) => K
+): Record<K, T[]> {
+  return arr.reduce((acc, item) => {
+    const key = keyFn(item);
+    if (!acc[key]) {
+      acc[key] = [];
     }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<K, T[]>);
 }
