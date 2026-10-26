@@ -1,51 +1,43 @@
+export class ConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
+}
+
 export interface AppConfig {
   host: string;
   port: number;
-  debug: boolean;
-  timeout: number;
-  retries: number;
-  env: 'development' | 'production' | 'test';
 }
 
-export const DEFAULT_CONFIG: AppConfig = {
-  host: '127.0.0.1',
-  port: 8080,
-  debug: false,
-  timeout: 5000,
-  retries: 3,
-  env: 'development',
+export const validateConfig = (config: unknown): AppConfig => {
+  if (!config || typeof config !== 'object') {
+    throw new ConfigurationError('invalid configuration structure');
+  }
+
+  const { host, port } = config as Partial<AppConfig>;
+
+  if (typeof host !== 'string' || host.trim().length === 0) {
+    throw new ConfigurationError('missing or empty host');
+  }
+
+  if (typeof port !== 'number' || port < 1 || port > 65535) {
+    throw new ConfigurationError('invalid port number range');
+  }
+
+  return { host, port };
 };
 
-export class ConfigLoader<T extends object> {
-  private readonly defaults: T;
-  private currentConfig: T;
-
-  constructor(defaults: T) {
-    this.defaults = Object.freeze({ ...defaults });
-    this.currentConfig = { ...this.defaults };
-  }
-
-  public load(overrides: Partial<T> = {}): T {
-    this.currentConfig = {
-      ...this.defaults,
-      ...overrides,
-    };
-    return this.get();
-  }
-
-  public get(): T;
-  public get<K extends keyof T>(key: K): T[K];
-  public get<K extends keyof T>(key?: K): T | T[K] {
-    if (key !== undefined) {
-      return this.currentConfig[key];
+export const loadConfig = (env: Record<string, string | undefined>): AppConfig => {
+  try {
+    return validateConfig({
+      host: env.APP_HOST ?? 'localhost',
+      port: env.APP_PORT ? parseInt(env.APP_PORT, 10) : 8080,
+    });
+  } catch (err) {
+    if (err instanceof ConfigurationError) {
+      console.error(`config validation failed: ${err.message}`);
     }
-    return { ...this.currentConfig };
+    throw err;
   }
-
-  public reset(): T {
-    this.currentConfig = { ...this.defaults };
-    return this.get();
-  }
-}
-
-export const defaultConfigLoader = new ConfigLoader<AppConfig>(DEFAULT_CONFIG);
+};
