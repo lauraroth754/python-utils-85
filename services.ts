@@ -1,32 +1,24 @@
-export class MemoizedService {
-  private cache: Map<string, any> = new Map();
-  private readonly ttl: number = 5000;
+export const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-  public async executeTask<T>(key: string, task: () => Promise<T>): Promise<T> {
-    const cached = this.cache.get(key);
-    if (cached && (Date.now() - cached.timestamp < this.ttl)) {
-      return cached.data;
-    }
+export const getUnique = <T>(arr: T[]): T[] => [...new Set(arr)];
 
-    const data = await task();
-    this.cache.set(key, { data, timestamp: Date.now() });
-    return data;
-  }
+export const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-  public clearCache(key?: string): void {
-    if (key) {
-      this.cache.delete(key);
-    } else {
-      this.cache.clear();
-    }
-  }
-}
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
 
-export const batchProcess = <T, R>(items: T[], processor: (item: T) => R, chunkSize: number = 100): R[] => {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += chunkSize) {
-    const chunk = items.slice(i, i + chunkSize);
-    results.push(...chunk.map(processor));
-  }
-  return results;
-};
+export const formatDate = (date: Date): string =>
+  date.toISOString().split('T')[0];
+
+export const isNotEmpty = <T>(val: T | null | undefined): val is T =>
+  val !== null && val !== undefined;
+
+export const clamp = (val: number, min: number, max: number): number =>
+  Math.min(Math.max(val, min), max);
