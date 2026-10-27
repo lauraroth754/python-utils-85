@@ -1,32 +1,30 @@
-export interface ProcessedData {
-  id: string;
-  value: number;
+export type Nullable<T> = T | null;
+export type Optional<T> = T | undefined;
+export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+export type Dict<T = unknown> = Record<string, T>;
+export type List<T = unknown> = T[];
+
+export interface PythonSlice {
+  start?: number;
+  stop?: number;
+  step?: number;
 }
 
-export class ValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ValidationError';
-  }
+export interface ProcessOptions<T, R> {
+  filterFn?: (item: T) => boolean;
+  mapFn?: (item: T) => R;
+  defaultValue?: R;
 }
 
-export const validateInput = (input: unknown): input is ProcessedData => {
-  if (typeof input !== 'object' || input === null) return false;
-  const data = input as Record<string, unknown>;
-  return (
-    typeof data.id === 'string' &&
-    typeof data.value === 'number' &&
-    !isNaN(data.value)
-  );
-};
+export interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+  hits: number;
+}
 
-export const processInput = (data: unknown[]): ProcessedData[] => {
-  return data.reduce<ProcessedData[]>((acc, item) => {
-    if (validateInput(item)) {
-      acc.push(item);
-    } else {
-      throw new ValidationError(`Invalid data structure: ${JSON.stringify(item)}`);
-    }
-    return acc;
-  }, []);
-};
+export type GroupedData<T> = Record<string | number, T[]>;
+
+export type Result<T, E = Error> =
+  | { success: true; data: T }
+  | { success: false; error: E };
