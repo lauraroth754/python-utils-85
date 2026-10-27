@@ -1,10 +1,7 @@
-export class FastCache<K, V> {
+export class LruCache<K, V> {
   private cache = new Map<K, V>();
-  private readonly maxSize: number;
 
-  constructor(maxSize: number = 1000) {
-    this.maxSize = maxSize;
-  }
+  constructor(private readonly capacity: number = 1000) {}
 
   get(key: K): V | undefined {
     const item = this.cache.get(key);
@@ -18,10 +15,10 @@ export class FastCache<K, V> {
   set(key: K, value: V): void {
     if (this.cache.has(key)) {
       this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
+    } else if (this.cache.size >= this.capacity) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
       }
     }
     this.cache.set(key, value);
@@ -32,36 +29,24 @@ export class FastCache<K, V> {
   }
 }
 
-export function memoize<T extends (...args: any[]) => any>(
-  fn: T,
-  capacity: number = 500
-): T {
-  const cache = new FastCache<string, ReturnType<T>>(capacity);
+const stringCache = new LruCache<string, string>(2048);
 
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    const cached = cache.get(key);
-    if (cached !== undefined) {
-      return cached;
-    }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
+export function memoizedSnakeToCamel(str: string): string {
+  const cached = stringCache.get(str);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const result = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+  stringCache.set(str, result);
+  return result;
 }
 
-export function batchProcess<T, R>(
-  items: T[],
-  batchSize: number,
-  fn: (batch: T[]) => R[]
-): R[] {
-  const results: R[] = new Array(items.length);
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const processed = fn(batch);
-    for (let j = 0; j < processed.length; j++) {
-      results[i + j] = processed[j];
-    }
+export function memoizedCamelToSnake(str: string): string {
+  const cached = stringCache.get(str);
+  if (cached !== undefined) {
+    return cached;
   }
-  return results;
+  const result = str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  stringCache.set(str, result);
+  return result;
 }
