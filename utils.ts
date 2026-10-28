@@ -1,52 +1,27 @@
-export class LruCache<K, V> {
-  private cache = new Map<K, V>();
+export interface DataChunk {
+  id: string;
+  payload: Uint8Array;
+}
 
-  constructor(private readonly capacity: number = 1000) {}
+export class Processor {
+  private cache: Map<string, DataChunk> = new Map();
 
-  get(key: K): V | undefined {
-    const item = this.cache.get(key);
-    if (item !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, item);
-    }
-    return item;
-  }
-
-  set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey !== undefined) {
-        this.cache.delete(oldestKey);
+  public process(data: DataChunk[]): DataChunk[] {
+    return data.map((item) => {
+      if (this.cache.has(item.id)) {
+        return this.cache.get(item.id)!;
       }
-    }
-    this.cache.set(key, value);
+      const processed = this.transform(item);
+      this.cache.set(item.id, processed);
+      return processed;
+    });
   }
 
-  clear(): void {
+  private transform(data: DataChunk): DataChunk {
+    return { ...data, payload: new Uint8Array(data.payload).reverse() };
+  }
+
+  public clearCache(): void {
     this.cache.clear();
   }
-}
-
-const stringCache = new LruCache<string, string>(2048);
-
-export function memoizedSnakeToCamel(str: string): string {
-  const cached = stringCache.get(str);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const result = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-  stringCache.set(str, result);
-  return result;
-}
-
-export function memoizedCamelToSnake(str: string): string {
-  const cached = stringCache.get(str);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const result = str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-  stringCache.set(str, result);
-  return result;
 }
