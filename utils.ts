@@ -1,27 +1,32 @@
-export interface DataChunk {
-  id: string;
-  payload: Uint8Array;
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface LoggerConfig {
+  logDir: string;
+  filename: string;
+  maxSizeMb: number;
 }
 
-export class Processor {
-  private cache: Map<string, DataChunk> = new Map();
+export const setupLogger = (config: LoggerConfig) => {
+  const filePath = path.join(config.logDir, config.filename);
 
-  public process(data: DataChunk[]): DataChunk[] {
-    return data.map((item) => {
-      if (this.cache.has(item.id)) {
-        return this.cache.get(item.id)!;
-      }
-      const processed = this.transform(item);
-      this.cache.set(item.id, processed);
-      return processed;
-    });
+  if (!fs.existsSync(config.logDir)) {
+    fs.mkdirSync(config.logDir, { recursive: true });
   }
 
-  private transform(data: DataChunk): DataChunk {
-    return { ...data, payload: new Uint8Array(data.payload).reverse() };
-  }
+  return (message: string) => {
+    if (fs.existsSync(filePath) && fs.statSync(filePath).size > config.maxSizeMb * 1024 * 1024) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      fs.renameSync(filePath, `${filePath}.${timestamp}`);
+    }
 
-  public clearCache(): void {
-    this.cache.clear();
-  }
-}
+    const entry = `[${new Date().toISOString()}] ${message}\n`;
+    fs.appendFileSync(filePath, entry);
+  };
+};
+
+export const logger = setupLogger({
+  logDir: './logs',
+  filename: 'app.log',
+  maxSizeMb: 5
+});
