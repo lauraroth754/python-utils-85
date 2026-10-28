@@ -1,27 +1,33 @@
-export const chunk = <T>(arr: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );
+export interface ProcessedData {
+  id: string;
+  value: number;
+}
 
-export const debounce = <F extends (...args: any[]) => void>(
-  fn: F, 
-  delay: number
-): (...args: Parameters<F>) => void => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
-  };
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+}
+
+export const validateInput = (input: unknown): input is ProcessedData => {
+  if (typeof input !== 'object' || input === null) return false;
+  const data = input as Record<string, unknown>;
+  return (
+    typeof data.id === 'string' &&
+    typeof data.value === 'number' &&
+    !Number.isNaN(data.value)
+  );
 };
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
-  keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
-
-export const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-export const isObject = (val: unknown): val is Record<string, unknown> =>
-  val !== null && typeof val === 'object' && !Array.isArray(val);
+export const processInput = (batch: unknown[]): ProcessedData[] => {
+  const results: ProcessedData[] = [];
+  for (const item of batch) {
+    if (validateInput(item)) {
+      results.push(item);
+    } else {
+      throw new ValidationError(`Invalid input detected: ${JSON.stringify(item)}`);
+    }
+  }
+  return results;
+};
