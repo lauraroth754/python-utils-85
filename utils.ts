@@ -1,26 +1,30 @@
-export interface RetryOptions {
-  maxRetries: number;
-  delayMs: number;
-}
+export const chunk = <T>(array: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
 
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = { maxRetries: 3, delayMs: 1000 }
-): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      if (attempt < options.maxRetries) {
-        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
-      }
-    }
-  }
-  throw lastError;
-}
+export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+};
 
-export function isNetworkError(error: unknown): boolean {
-  return error instanceof Error && ('code' in error || 'status' in error);
-}
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
+
+export const wait = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export const slugify = (text: string): string =>
+  text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
