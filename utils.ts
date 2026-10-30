@@ -1,32 +1,43 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-interface LoggerConfig {
-  logDir: string;
-  filename: string;
-  maxSizeMb: number;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
 }
 
-export const setupLogger = (config: LoggerConfig) => {
-  const filePath = path.join(config.logDir, config.filename);
-
-  if (!fs.existsSync(config.logDir)) {
-    fs.mkdirSync(config.logDir, { recursive: true });
+export const executePythonCommand = async (cmd: string): Promise<string> => {
+  if (!cmd || typeof cmd !== 'string') {
+    throw new PythonUtilsError('invalid command string', 'INVALID_INPUT');
   }
 
-  return (message: string) => {
-    if (fs.existsSync(filePath) && fs.statSync(filePath).size > config.maxSizeMb * 1024 * 1024) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      fs.renameSync(filePath, `${filePath}.${timestamp}`);
+  try {
+    const response = await fetch('/api/python', {
+      method: 'POST',
+      body: JSON.stringify({ cmd }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new PythonUtilsError('execution failed', 'EXECUTION_ERROR');
     }
 
-    const entry = `[${new Date().toISOString()}] ${message}\n`;
-    fs.appendFileSync(filePath, entry);
-  };
+    return await response.text();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new PythonUtilsError('network failure', 'NETWORK_ERROR');
+    }
+    throw error;
+  }
 };
 
-export const logger = setupLogger({
-  logDir: './logs',
-  filename: 'app.log',
-  maxSizeMb: 5
-});
+export const parsePythonOutput = (data: unknown): Record<string, any> => {
+  if (data === null || typeof data !== 'object') {
+    throw new PythonUtilsError('malformed output structure', 'PARSE_ERROR');
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch {
+    throw new PythonUtilsError('serialization failure', 'SERIALIZATION_ERROR');
+  }
+};
