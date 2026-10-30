@@ -1,43 +1,27 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
-}
+import { createLogger, format, transports, Logger } from 'winston';
+import 'winston-daily-rotate-file';
 
-export const executePythonCommand = async (cmd: string): Promise<string> => {
-  if (!cmd || typeof cmd !== 'string') {
-    throw new PythonUtilsError('invalid command string', 'INVALID_INPUT');
-  }
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.errors({ stack: true }),
+  format.json()
+);
 
-  try {
-    const response = await fetch('/api/python', {
-      method: 'POST',
-      body: JSON.stringify({ cmd }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!response.ok) {
-      throw new PythonUtilsError('execution failed', 'EXECUTION_ERROR');
-    }
-
-    return await response.text();
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new PythonUtilsError('network failure', 'NETWORK_ERROR');
-    }
-    throw error;
-  }
-};
-
-export const parsePythonOutput = (data: unknown): Record<string, any> => {
-  if (data === null || typeof data !== 'object') {
-    throw new PythonUtilsError('malformed output structure', 'PARSE_ERROR');
-  }
-
-  try {
-    return JSON.parse(JSON.stringify(data));
-  } catch {
-    throw new PythonUtilsError('serialization failure', 'SERIALIZATION_ERROR');
-  }
+export const setupLogger = (filename: string): Logger => {
+  return createLogger({
+    level: 'info',
+    format: logFormat,
+    transports: [
+      new transports.Console({
+        format: format.combine(format.colorize(), format.simple())
+      }),
+      new (transports as any).DailyRotateFile({
+        filename: `logs/${filename}-%DATE%.log`,
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: true,
+        maxSize: '20m',
+        maxFiles: '14d'
+      })
+    ]
+  });
 };
