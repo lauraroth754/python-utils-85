@@ -1,27 +1,26 @@
-import { createLogger, format, transports, Logger } from 'winston';
-import 'winston-daily-rotate-file';
+export interface RetryOptions {
+  maxRetries: number;
+  delayMs: number;
+}
 
-const logFormat = format.combine(
-  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  format.errors({ stack: true }),
-  format.json()
-);
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = { maxRetries: 3, delayMs: 1000 }
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= options.maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < options.maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+      }
+    }
+  }
+  throw lastError;
+}
 
-export const setupLogger = (filename: string): Logger => {
-  return createLogger({
-    level: 'info',
-    format: logFormat,
-    transports: [
-      new transports.Console({
-        format: format.combine(format.colorize(), format.simple())
-      }),
-      new (transports as any).DailyRotateFile({
-        filename: `logs/${filename}-%DATE%.log`,
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxSize: '20m',
-        maxFiles: '14d'
-      })
-    ]
-  });
-};
+export function isNetworkError(error: unknown): boolean {
+  return error instanceof Error && ('code' in error || 'status' in error);
+}
