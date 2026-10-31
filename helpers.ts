@@ -1,30 +1,28 @@
-export type DataMap<T> = Record<string, T>;
+export type DataMap = Record<string, unknown>;
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  return keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
+export function sanitizeData(data: DataMap): DataMap {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== null && value !== undefined) {
+      acc[key] = typeof value === 'string' ? value.trim() : value;
+    }
     return acc;
-  }, {} as Pick<T, K>);
-};
+  }, {} as DataMap);
+}
 
-export const omit = <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
-  const result = { ...obj };
-  keys.forEach((key) => delete result[key]);
-  return result as Omit<T, K>;
-};
+export function chunkArray<T>(array: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+}
 
-export const groupBy = <T>(arr: T[], key: keyof T): DataMap<T[]> => {
-  return arr.reduce((acc, item) => {
-    const val = String(item[key]);
-    acc[val] = acc[val] || [];
-    acc[val].push(item);
-    return acc;
-  }, {} as DataMap<T[]>);
-};
+export function getNestedValue(obj: DataMap, path: string): unknown {
+  return path.split('.').reduce((acc, key) => (acc as DataMap)?.[key], obj);
+}
 
-export const isEmpty = (value: unknown): boolean => {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value as object).length === 0;
-  return false;
-};
+export function safeJsonParse<T>(json: string, fallback: T): T {
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    return fallback;
+  }
+}
