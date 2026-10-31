@@ -1,30 +1,77 @@
-export const chunk = <T>(array: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
+export class PythonUtilsError extends Error {
+  constructor(message: string, public readonly code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
+}
 
-export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
+export interface SliceOptions {
+  start?: number;
+  stop?: number;
+  step?: number;
+}
+
+export function parseSlice(input: string): SliceOptions {
+  if (typeof input !== 'string') {
+    throw new PythonUtilsError('Input must be a string', 'ERR_INVALID_TYPE');
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new PythonUtilsError('Slice string cannot be empty', 'ERR_EMPTY_STRING');
+  }
+
+  const parts = trimmed.split(':');
+  if (parts.length > 3) {
+    throw new PythonUtilsError('Slice format cannot exceed 2 colons', 'ERR_INVALID_FORMAT');
+  }
+
+  const parseNumber = (val: string, fieldName: string): number | undefined => {
+    const cleanVal = val.trim();
+    if (cleanVal === '') return undefined;
+    const num = Number(cleanVal);
+    if (!Number.isInteger(num)) {
+      throw new PythonUtilsError(`Invalid ${fieldName} value: must be an integer`, 'ERR_NON_INTEGER');
+    }
+    return num;
   };
-};
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
-  keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
+  const step = parts.length === 3 ? parseNumber(parts[2], 'step') : undefined;
+  if (step === 0) {
+    throw new PythonUtilsError('Slice step cannot be zero', 'ERR_ZERO_STEP');
+  }
 
-export const wait = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  return {
+    start: parts[0] !== undefined ? parseNumber(parts[0], 'start') : undefined,
+    stop: parts[1] !== undefined ? parseNumber(parts[1], 'stop') : undefined,
+    step,
+  };
+}
 
-export const slugify = (text: string): string =>
-  text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
+export function safeRange(start: number, stop?: number, step = 1): number[] {
+  if (!Number.isFinite(start) || (stop !== undefined && !Number.isFinite(stop)) || !Number.isFinite(step)) {
+    throw new PythonUtilsError('Range arguments must be finite numbers', 'ERR_NON_FINITE');
+  }
+  if (step === 0) {
+    throw new PythonUtilsError('Range step cannot be zero', 'ERR_ZERO_STEP');
+  }
+
+  let actualStart = start;
+  let actualStop = stop;
+  if (actualStop === undefined) {
+    actualStop = start;
+    actualStart = 0;
+  }
+
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = actualStart; i < actualStop; i += step) {
+      result.push(i);
+    }
+  } else {
+    for (let i = actualStart; i > actualStop; i += step) {
+      result.push(i);
+    }
+  }
+  return result;
+}
