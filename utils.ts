@@ -1,66 +1,34 @@
-import * as fs from 'fs';
-import * as path from 'path';
-
-export interface LoggerOptions {
-  dir: string;
-  maxSizeBytes?: number;
-  maxFiles?: number;
+export interface ProcessingConfig {
+  maxRetries: number;
+  timeoutMs: number;
 }
 
-export class RotatingLogger {
-  private dir: string;
-  private maxSizeBytes: number;
-  private maxFiles: number;
-  private currentFilePath: string;
+export const validateInput = (input: unknown): input is Record<string, unknown> => {
+  return typeof input === 'object' && input !== null;
+};
 
-  constructor(options: LoggerOptions) {
-    this.dir = options.dir;
-    this.maxSizeBytes = options.maxSizeBytes ?? 1024 * 1024;
-    this.maxFiles = options.maxFiles ?? 5;
-    this.currentFilePath = path.join(this.dir, 'app.log');
-
-    if (!fs.existsSync(this.dir)) {
-      fs.mkdirSync(this.dir, { recursive: true });
-    }
+export const processMainLoop = (data: unknown[], config: ProcessingConfig): void => {
+  if (!Array.isArray(data)) {
+    throw new Error('Invalid input: data must be an array');
   }
 
-  private rotate(): void {
-    if (!fs.existsSync(this.currentFilePath)) return;
-
-    const stats = fs.statSync(this.currentFilePath);
-    if (stats.size < this.maxSizeBytes) return;
-
-    for (let i = this.maxFiles - 1; i >= 1; i--) {
-      const oldPath = path.join(this.dir, `app.${i}.log`);
-      const newPath = path.join(this.dir, `app.${i + 1}.log`);
-      if (fs.existsSync(oldPath)) {
-        if (i + 1 > this.maxFiles) {
-          fs.unlinkSync(oldPath);
-        } else {
-          fs.renameSync(oldPath, newPath);
-        }
-      }
+  for (const item of data) {
+    if (!validateInput(item)) {
+      console.warn('Skipping invalid item in loop');
+      continue;
     }
 
-    fs.renameSync(this.currentFilePath, path.join(this.dir, 'app.1.log'));
+    try {
+      executeTask(item, config);
+    } catch (err) {
+      console.error('Task execution failed', err);
+    }
   }
+};
 
-  public log(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
-    this.rotate();
-    const timestamp = new Date().toISOString();
-    const entry = `[${timestamp}] [${level}] ${message}\n`;
-    fs.appendFileSync(this.currentFilePath, entry, 'utf-8');
+const executeTask = (item: Record<string, unknown>, config: ProcessingConfig): void => {
+  if (!('id' in item)) {
+    throw new Error('Missing required field: id');
   }
-
-  public info(message: string): void {
-    this.log('INFO', message);
-  }
-
-  public warn(message: string): void {
-    this.log('WARN', message);
-  }
-
-  public error(message: string): void {
-    this.log('ERROR', message);
-  }
-}
+  console.log(`Processing item ${item.id} with timeout ${config.timeoutMs}`);
+};
