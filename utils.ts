@@ -1,31 +1,66 @@
-export type DataMap = Record<string, unknown>;
+import * as fs from 'fs';
+import * as path from 'path';
 
-export const sanitizeData = <T extends DataMap>(data: T): T => {
-  const sanitized = { ...data };
-  for (const key in sanitized) {
-    if (sanitized[key] === null || sanitized[key] === undefined) {
-      delete sanitized[key];
+export interface LoggerOptions {
+  dir: string;
+  maxSizeBytes?: number;
+  maxFiles?: number;
+}
+
+export class RotatingLogger {
+  private dir: string;
+  private maxSizeBytes: number;
+  private maxFiles: number;
+  private currentFilePath: string;
+
+  constructor(options: LoggerOptions) {
+    this.dir = options.dir;
+    this.maxSizeBytes = options.maxSizeBytes ?? 1024 * 1024;
+    this.maxFiles = options.maxFiles ?? 5;
+    this.currentFilePath = path.join(this.dir, 'app.log');
+
+    if (!fs.existsSync(this.dir)) {
+      fs.mkdirSync(this.dir, { recursive: true });
     }
   }
-  return sanitized;
-};
 
-export const normalizeKeys = (data: DataMap): DataMap => {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
-    acc[normalizedKey] = value;
-    return acc;
-  }, {} as DataMap);
-};
+  private rotate(): void {
+    if (!fs.existsSync(this.currentFilePath)) return;
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
+    const stats = fs.statSync(this.currentFilePath);
+    if (stats.size < this.maxSizeBytes) return;
 
-export const getNestedValue = (obj: DataMap, path: string): unknown => {
-  return path.split('.').reduce((acc: any, part) => acc?.[part], obj);
-};
+    for (let i = this.maxFiles - 1; i >= 1; i--) {
+      const oldPath = path.join(this.dir, `app.${i}.log`);
+      const newPath = path.join(this.dir, `app.${i + 1}.log`);
+      if (fs.existsSync(oldPath)) {
+        if (i + 1 > this.maxFiles) {
+          fs.unlinkSync(oldPath);
+        } else {
+          fs.renameSync(oldPath, newPath);
+        }
+      }
+    }
 
-export const isValidRecord = (value: unknown): value is DataMap => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
+    fs.renameSync(this.currentFilePath, path.join(this.dir, 'app.1.log'));
+  }
+
+  public log(level: 'INFO' | 'WARN' | 'ERROR', message: string): void {
+    this.rotate();
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] [${level}] ${message}\n`;
+    fs.appendFileSync(this.currentFilePath, entry, 'utf-8');
+  }
+
+  public info(message: string): void {
+    this.log('INFO', message);
+  }
+
+  public warn(message: string): void {
+    this.log('WARN', message);
+  }
+
+  public error(message: string): void {
+    this.log('ERROR', message);
+  }
+}
