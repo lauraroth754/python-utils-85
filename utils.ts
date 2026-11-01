@@ -1,38 +1,31 @@
-export type Processor<T> = (item: T) => T;
+export type DataMap = Record<string, unknown>;
 
-export class MemoizedProcessor<T> {
-  private cache: Map<string, T> = new Map();
-
-  constructor(private processor: Processor<T>, private keyGen: (item: T) => string) {}
-
-  process(item: T): T {
-    const key = this.keyGen(item);
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
+export const sanitizeData = <T extends DataMap>(data: T): T => {
+  const sanitized = { ...data };
+  for (const key in sanitized) {
+    if (sanitized[key] === null || sanitized[key] === undefined) {
+      delete sanitized[key];
     }
-    const result = this.processor(item);
-    this.cache.set(key, result);
-    return result;
   }
-
-  clearCache(): void {
-    this.cache.clear();
-  }
-}
-
-export const batchProcess = <T>(items: T[], fn: Processor<T>, size: number = 100): T[] => {
-  const result: T[] = [];
-  for (let i = 0; i < items.length; i += size) {
-    const chunk = items.slice(i, i + size);
-    result.push(...chunk.map(fn));
-  }
-  return result;
+  return sanitized;
 };
 
-export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
-  let timer: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>): void => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
+export const normalizeKeys = (data: DataMap): DataMap => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    const normalizedKey = key.toLowerCase().replace(/\s+/g, '_');
+    acc[normalizedKey] = value;
+    return acc;
+  }, {} as DataMap);
+};
+
+export const deepClone = <T>(obj: T): T => {
+  return JSON.parse(JSON.stringify(obj));
+};
+
+export const getNestedValue = (obj: DataMap, path: string): unknown => {
+  return path.split('.').reduce((acc: any, part) => acc?.[part], obj);
+};
+
+export const isValidRecord = (value: unknown): value is DataMap => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
