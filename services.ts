@@ -1,37 +1,35 @@
-export interface TaskResult<T> {
-  data: T | null;
-  error: Error | null;
-  timestamp: number;
+interface ProcessingConfig {
+  input: unknown;
+  threshold: number;
 }
 
-export class DataProcessor {
-  /**
-   * processes input data and wraps in result object
-   */
-  process<T>(input: T): TaskResult<T> {
+export const validateInput = (data: unknown): data is ProcessingConfig => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'input' in data &&
+    typeof (data as ProcessingConfig).threshold === 'number'
+  );
+};
+
+export const processMainLoop = (items: unknown[]): void => {
+  for (const item of items) {
+    if (!validateInput(item)) {
+      console.error('Invalid configuration schema detected');
+      continue;
+    }
+
     try {
-      return {
-        data: input,
-        error: null,
-        timestamp: Date.now(),
-      };
-    } catch (e) {
-      return {
-        data: null,
-        error: e as Error,
-        timestamp: Date.now(),
-      };
+      const { input, threshold } = item;
+      if (threshold < 0) throw new Error('Negative threshold');
+      console.log('Processing:', input);
+    } catch (err) {
+      console.error('Execution failure:', err);
     }
   }
+};
 
-  /**
-   * validates presence of data in task result
-   */
-  isValid<T>(result: TaskResult<T>): boolean {
-    return result.data !== null && result.error === null;
-  }
-}
-
-export const formatOutput = (value: unknown): string => {
-  return JSON.stringify(value, null, 2);
+export const runService = (payload: unknown[]): void => {
+  if (!Array.isArray(payload)) return;
+  processMainLoop(payload);
 };
