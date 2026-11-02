@@ -1,30 +1,38 @@
-export type Nullable<T> = T | null;
-export type Optional<T> = T | undefined;
-export type Primitive = string | number | boolean | bigint | symbol | null | undefined;
-
-export type Dict<T = unknown> = Record<string, T>;
-export type List<T = unknown> = T[];
-
-export interface PythonSlice {
-  start?: number;
-  stop?: number;
-  step?: number;
+export interface PythonConfig {
+  version: string;
+  path: string;
+  debug: boolean;
 }
 
-export interface ProcessOptions<T, R> {
-  filterFn?: (item: T) => boolean;
-  mapFn?: (item: T) => R;
-  defaultValue?: R;
+export interface ExecutionResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
 }
 
-export interface CacheEntry<T> {
-  value: T;
-  expiresAt: number;
-  hits: number;
+export type PythonModule = Record<string, unknown>;
+
+/**
+ * Orchestrates utility execution for python-utils-85
+ */
+export class UtilsManager {
+  private readonly config: PythonConfig;
+
+  constructor(config: PythonConfig) {
+    this.config = config;
+  }
+
+  public getVersion(): string {
+    return this.config.version;
+  }
+
+  public validatePath(): boolean {
+    return this.config.path.length > 0;
+  }
 }
 
-export type GroupedData<T> = Record<string | number, T[]>;
-
-export type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+export const DEFAULT_CONFIG: PythonConfig = {
+  version: '3.10.0',
+  path: '/usr/bin/python3',
+  debug: false
+};
