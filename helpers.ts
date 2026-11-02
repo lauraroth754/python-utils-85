@@ -1,28 +1,27 @@
-export type DataMap = Record<string, unknown>;
-
-export function sanitizeData(data: DataMap): DataMap {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    if (value !== null && value !== undefined) {
-      acc[key] = typeof value === 'string' ? value.trim() : value;
-    }
-    return acc;
-  }, {} as DataMap);
+export interface Config {
+  port: number;
+  host: string;
+  debug: boolean;
 }
 
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-}
+const DEFAULT_CONFIG: Config = {
+  port: 8080,
+  host: 'localhost',
+  debug: false,
+};
 
-export function getNestedValue(obj: DataMap, path: string): unknown {
-  return path.split('.').reduce((acc, key) => (acc as DataMap)?.[key], obj);
-}
+export const loadConfig = (overrides: Partial<Config> = {}): Config => {
+  const envConfig: Partial<Config> = {
+    ...(process.env.PORT ? { port: parseInt(process.env.PORT, 10) } : {}),
+    ...(process.env.HOST ? { host: process.env.HOST } : {}),
+    ...(process.env.DEBUG ? { debug: process.env.DEBUG === 'true' } : {}),
+  };
 
-export function safeJsonParse<T>(json: string, fallback: T): T {
-  try {
-    return JSON.parse(json) as T;
-  } catch {
-    return fallback;
+  return { ...DEFAULT_CONFIG, ...overrides, ...envConfig };
+};
+
+export const validateConfig = (config: Config): void => {
+  if (config.port < 1024 || config.port > 65535) {
+    throw new Error('Invalid port range');
   }
-}
+};
