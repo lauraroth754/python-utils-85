@@ -1,34 +1,39 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code?: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
-}
+export type DataMap = Record<string, unknown>;
 
-export const executePythonCommand = <T>(fn: () => T): T => {
-  try {
-    return fn();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw new PythonUtilsError(`Execution failed: ${error.message}`, 'EXEC_ERROR');
+export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  return keys.reduce((acc, key) => {
+    if (key in obj) {
+      acc[key] = obj[key];
     }
-    throw new PythonUtilsError('Unknown execution failure', 'UNKNOWN_ERROR');
-  }
+    return acc;
+  }, {} as Pick<T, K>);
 };
 
-export const safeParse = <T>(data: string, fallback: T): T => {
-  try {
-    return JSON.parse(data) as T;
-  } catch {
-    return fallback;
-  }
+export const omit = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+  const result = { ...obj };
+  keys.forEach((key) => delete result[key]);
+  return result as Omit<T, K>;
 };
 
-export const validateInput = (input: unknown): void => {
-  if (input === null || input === undefined) {
-    throw new PythonUtilsError('Invalid input: input is null or undefined', 'INVALID_INPUT');
+export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> => {
+  return array.reduce((acc, item) => {
+    const groupKey = String(item[key]);
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
+    }
+    acc[groupKey].push(item);
+    return acc;
+  }, {} as Record<string, T[]>);
+};
+
+export const sanitize = (data: unknown): unknown => {
+  if (data === null || typeof data !== 'object') {
+    return data;
   }
-  if (typeof input !== 'object') {
-    throw new PythonUtilsError('Invalid input: input is not an object', 'INVALID_TYPE');
-  }
+  return JSON.parse(JSON.stringify(data));
+};
+
+export const isEmpty = (obj: DataMap | unknown[]): boolean => {
+  if (Array.isArray(obj)) return obj.length === 0;
+  return Object.keys(obj).length === 0;
 };
