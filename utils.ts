@@ -1,47 +1,34 @@
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code?: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
   }
-  return result;
 }
 
-export function pick<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Pick<T, K> {
-  const result = {} as Pick<T, K>;
-  for (const key of keys) {
-    if (key in obj) {
-      result[key] = obj[key];
-    }
-  }
-  return result;
-}
-
-export function omit<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Omit<T, K> {
-  const keySet = new Set<keyof T>(keys);
-  const result = {} as Record<string, unknown>;
-  for (const key of Object.keys(obj) as Array<keyof T>) {
-    if (!keySet.has(key)) {
-      result[key as string] = obj[key];
-    }
-  }
-  return result as Omit<T, K>;
-}
-
-export function safeJsonParse<T>(jsonString: string, fallback: T): T {
+export const executePythonCommand = <T>(fn: () => T): T => {
   try {
-    return JSON.parse(jsonString) as T;
+    return fn();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new PythonUtilsError(`Execution failed: ${error.message}`, 'EXEC_ERROR');
+    }
+    throw new PythonUtilsError('Unknown execution failure', 'UNKNOWN_ERROR');
+  }
+};
+
+export const safeParse = <T>(data: string, fallback: T): T => {
+  try {
+    return JSON.parse(data) as T;
   } catch {
     return fallback;
   }
-}
+};
 
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+export const validateInput = (input: unknown): void => {
+  if (input === null || input === undefined) {
+    throw new PythonUtilsError('Invalid input: input is null or undefined', 'INVALID_INPUT');
+  }
+  if (typeof input !== 'object') {
+    throw new PythonUtilsError('Invalid input: input is not an object', 'INVALID_TYPE');
+  }
+};
