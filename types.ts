@@ -1,34 +1,49 @@
-export type Nullable<T> = T | null | undefined;
-
-export type PythonDict<K extends string | number | symbol, V> = Record<K, V>;
-
-export type PythonList<T> = T[];
-
-export interface SliceArgs {
-  start?: number;
-  stop?: number;
-  step?: number;
+/**
+ * Configuration options for python-like slice operations.
+ */
+export interface SliceOptions {
+  /** The starting index for slicing (inclusive). */
+  start?: number | null;
+  /** The ending index for slicing (exclusive). */
+  stop?: number | null;
+  /** The step interval between slice indices. */
+  step?: number | null;
 }
 
-export type StringFormatArgs = Record<string, unknown> | Array<unknown>;
+/**
+ * Generic key-value mapping mimicking Python dictionary operations.
+ */
+export type PyDict<T = unknown> = Record<string, T>;
 
-export interface ExecutionResult<T, E = Error> {
+/**
+ * Execution result structure for Python process runners.
+ */
+export interface PyExecResult<T = string> {
+  /** Indicates if execution succeeded without exceptions. */
   success: boolean;
-  data?: T;
-  error?: E;
+  /** Standard output or evaluation result. */
+  data: T | null;
+  /** Error message or stack trace if execution failed. */
+  error?: string;
+  /** Execution exit code or status indicator. */
+  code: number;
 }
 
-export type TransformFn<Input, Output> = (item: Input, index: number) => Output;
-
-export type PredicateFn<T> = (item: T, index: number) => boolean;
-
-export interface KeyValueTuple<K, V> {
-  key: K;
-  value: V;
+/**
+ * Options for transforming case styles (e.g., snake_case to camelCase).
+ */
+export interface CaseTransformOptions {
+  /** Whether to preserve original leading/trailing underscores. */
+  preserveUnderscores?: boolean;
+  /** Deeply convert nested object keys. */
+  recursive?: boolean;
 }
 
-export interface ReorgOptions {
-  preserveKeys?: boolean;
-  deepCopy?: boolean;
-  strictTypes?: boolean;
-}
+/**
+ * Function signature for Python-style range generators.
+ */
+export type RangeGenerator = (
+  start: number,
+  stop?: number,
+  step?: number
+) => Generator<number, void, unknown>;
