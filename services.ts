@@ -1,35 +1,62 @@
-interface ProcessingConfig {
-  input: unknown;
-  threshold: number;
+export interface RetryOptions {
+  retries: number;
+  delay: number;
+  backoff?: number;
 }
 
-export const validateInput = (data: unknown): data is ProcessingConfig => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'input' in data &&
-    typeof (data as ProcessingConfig).threshold === 'number'
-  );
-};
+export function toSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[\s-]+/g, '_')
+    .toLowerCase();
+}
 
-export const processMainLoop = (items: unknown[]): void => {
-  for (const item of items) {
-    if (!validateInput(item)) {
-      console.error('Invalid configuration schema detected');
-      continue;
-    }
+export function toCamelCase(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/([-_][a-z])/g, (group) =>
+      group.toUpperCase().replace('-', '').replace('_', '')
+    );
+}
 
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
+
+export async function retry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions
+): Promise<T> {
+  const { retries, delay, backoff = 1.5 } = options;
+  let currentDelay = delay;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const { input, threshold } = item;
-      if (threshold < 0) throw new Error('Negative threshold');
-      console.log('Processing:', input);
-    } catch (err) {
-      console.error('Execution failure:', err);
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === retries) break;
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay *= backoff;
     }
   }
-};
 
-export const runService = (payload: unknown[]): void => {
-  if (!Array.isArray(payload)) return;
-  processMainLoop(payload);
-};
+  throw lastError;
+}
+
+export function omit<T extends object, K extends keyof T>(
+  obj: T,
+  keys: K[]
+): Omit<T, K> {
+  const result = { ...obj };
+  for (const key of keys) {
+    delete result[key];
+  }
+  return result;
+}
