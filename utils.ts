@@ -1,38 +1,59 @@
-export type DataMap = Record<string, any>;
+export class FastLRUCache<K, V> {
+  private capacity: number;
+  private cache: Map<K, V>;
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
-
-export const sanitizeObject = (obj: DataMap): DataMap => {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    if (value !== null && value !== undefined) {
-      acc[key] = value;
+  constructor(capacity: number) {
+    if (capacity <= 0) {
+      throw new Error("Capacity must be greater than zero");
     }
-    return acc;
-  }, {} as DataMap);
-};
+    this.capacity = capacity;
+    this.cache = new Map<K, V>();
+  }
 
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
+  public get(key: K): V | undefined {
+    if (!this.cache.has(key)) {
+      return undefined;
+    }
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
 
-export const getNestedValue = (obj: DataMap, path: string): any => {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-};
+  public set(key: K, value: V): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.capacity) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
 
-export const uniqueArray = <T>(array: T[]): T[] => {
-  return Array.from(new Set(array));
-};
+  public clear(): void {
+    this.cache.clear();
+  }
 
-export const sleep = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
+  public size(): number {
+    return this.cache.size;
+  }
+}
 
-export const isNotEmpty = (val: unknown): boolean => {
-  if (Array.isArray(val)) return val.length > 0;
-  if (typeof val === 'object' && val !== null) return Object.keys(val).length > 0;
-  return val !== null && val !== undefined && val !== '';
-};
+export function memoize<T extends (...args: any[]) => any>(
+  fn: T,
+  capacity = 128
+): T {
+  const cache = new FastLRUCache<string, ReturnType<T>>(capacity);
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
+}
