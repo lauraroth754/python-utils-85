@@ -1,38 +1,34 @@
-export interface PythonConfig {
-  version: string;
-  path: string;
-  debug: boolean;
+export type Nullable<T> = T | null | undefined;
+
+export type PythonDict<K extends string | number | symbol, V> = Record<K, V>;
+
+export type PythonList<T> = T[];
+
+export interface SliceArgs {
+  start?: number;
+  stop?: number;
+  step?: number;
 }
 
-export interface ExecutionResult {
-  exitCode: number;
-  stdout: string;
-  stderr: string;
+export type StringFormatArgs = Record<string, unknown> | Array<unknown>;
+
+export interface ExecutionResult<T, E = Error> {
+  success: boolean;
+  data?: T;
+  error?: E;
 }
 
-export type PythonModule = Record<string, unknown>;
+export type TransformFn<Input, Output> = (item: Input, index: number) => Output;
 
-/**
- * Orchestrates utility execution for python-utils-85
- */
-export class UtilsManager {
-  private readonly config: PythonConfig;
+export type PredicateFn<T> = (item: T, index: number) => boolean;
 
-  constructor(config: PythonConfig) {
-    this.config = config;
-  }
-
-  public getVersion(): string {
-    return this.config.version;
-  }
-
-  public validatePath(): boolean {
-    return this.config.path.length > 0;
-  }
+export interface KeyValueTuple<K, V> {
+  key: K;
+  value: V;
 }
 
-export const DEFAULT_CONFIG: PythonConfig = {
-  version: '3.10.0',
-  path: '/usr/bin/python3',
-  debug: false
-};
+export interface ReorgOptions {
+  preserveKeys?: boolean;
+  deepCopy?: boolean;
+  strictTypes?: boolean;
+}
