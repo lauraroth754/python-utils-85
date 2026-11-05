@@ -1,23 +1,27 @@
-export interface Config {
+import { readFileSync } from 'fs';
+
+interface Config {
   host: string;
   port: number;
   debug: boolean;
 }
 
-const defaults: Config = {
-  host: 'localhost',
+const DEFAULTS: Config = {
+  host: '127.0.0.1',
   port: 8080,
-  debug: false,
+  debug: false
 };
 
-export const loadConfig = (overrides: Partial<Config> = {}): Config => {
-  return { ...defaults, ...overrides };
+export const loadConfig = (path?: string): Config => {
+  if (!path) return DEFAULTS;
+  try {
+    const data = JSON.parse(readFileSync(path, 'utf-8'));
+    return { ...DEFAULTS, ...data };
+  } catch (error) {
+    return DEFAULTS;
+  }
 };
 
-export const loadConfigFromEnv = (): Config => {
-  return {
-    host: process.env.APP_HOST || defaults.host,
-    port: parseInt(process.env.APP_PORT || '', 10) || defaults.port,
-    debug: process.env.APP_DEBUG === 'true' || defaults.debug,
-  };
+export const validateConfig = (config: Config): boolean => {
+  return typeof config.port === 'number' && typeof config.host === 'string';
 };
