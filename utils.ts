@@ -1,59 +1,45 @@
-export class FastLRUCache<K, V> {
-  private capacity: number;
-  private cache: Map<K, V>;
-
-  constructor(capacity: number) {
-    if (capacity <= 0) {
-      throw new Error("Capacity must be greater than zero");
-    }
-    this.capacity = capacity;
-    this.cache = new Map<K, V>();
-  }
-
-  public get(key: K): V | undefined {
-    if (!this.cache.has(key)) {
-      return undefined;
-    }
-    const value = this.cache.get(key)!;
-    this.cache.delete(key);
-    this.cache.set(key, value);
-    return value;
-  }
-
-  public set(key: K, value: V): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey !== undefined) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(key, value);
-  }
-
-  public clear(): void {
-    this.cache.clear();
-  }
-
-  public size(): number {
-    return this.cache.size;
-  }
+export function isObject(item: unknown): item is Record<string, any> {
+  return Boolean(item && typeof item === 'object' && !Array.isArray(item));
 }
 
-export function memoize<T extends (...args: any[]) => any>(
-  fn: T,
-  capacity = 128
-): T {
-  const cache = new FastLRUCache<string, ReturnType<T>>(capacity);
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    const cached = cache.get(key);
-    if (cached !== undefined) {
-      return cached;
+export function deepMerge<T extends Record<string, any>>(target: T, ...sources: Partial<T>[]): T {
+  if (!sources.length) return target;
+  const source = sources.shift();
+
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        const sourceVal = source[key];
+        if (isObject(sourceVal)) {
+          if (!target[key]) Object.assign(target, { [key]: {} });
+          deepMerge(target[key], sourceVal);
+        } else {
+          Object.assign(target, { [key]: sourceVal });
+        }
+      }
     }
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
+  }
+
+  return deepMerge(target, ...sources);
+}
+
+export function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, any> {
+  return Object.keys(obj).reduce((acc: Record<string, any>, key: string) => {
+    const pre = prefix.length ? `${prefix}.` : '';
+    if (isObject(obj[key])) {
+      Object.assign(acc, flattenObject(obj[key], `${pre}${key}`));
+    } else {
+      acc[`${pre}${key}`] = obj[key];
+    }
+    return acc;
+  }, {});
+}
+
+export function chunkArray<T>(array: T[], size: number): T[][] {
+  if (size <= 0) throw new Error('Chunk size must be greater than zero');
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
 }
