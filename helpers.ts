@@ -1,23 +1,30 @@
-export interface RetryOptions {
-  maxAttempts: number;
-  delayMs: number;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
 }
 
-export const retry = async <T>(
-  operation: () => Promise<T>,
-  options: RetryOptions = { maxAttempts: 3, delayMs: 1000 }
-): Promise<T> => {
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (err) {
-      lastError = err;
-      if (attempt === options.maxAttempts) break;
-      await new Promise((resolve) => setTimeout(resolve, options.delayMs));
-    }
+export const safeExecute = <T>(fn: () => T, fallback: T): T => {
+  try {
+    return fn();
+  } catch (err) {
+    console.error(`[python-utils-85] execution failure: ${err instanceof Error ? err.message : String(err)}`);
+    return fallback;
   }
+};
 
-  throw lastError;
+export const validateConfig = (config: unknown): config is Record<string, any> => {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new PythonUtilsError('invalid configuration structure', 'INVALID_CONFIG');
+  }
+  return true;
+};
+
+export const handleAsyncOperation = async <T>(promise: Promise<T>): Promise<T | null> => {
+  try {
+    return await promise;
+  } catch (err) {
+    return null;
+  }
 };
