@@ -1,59 +1,31 @@
-export class EdgeCaseError extends Error {
-  constructor(message: string, public readonly code: string) {
-    super(message);
-    this.name = 'EdgeCaseError';
-  }
+import * as fs from 'fs';
+import * as path from 'path';
+
+interface LoggerConfig {
+  logDir: string;
+  maxSize: number;
+  maxFiles: number;
 }
 
-export function safeJsonParse<T>(input: unknown, fallback: T): T {
-  if (typeof input !== 'string') {
-    return fallback;
+export const setupLogger = (config: LoggerConfig): (message: string) => void => {
+  if (!fs.existsSync(config.logDir)) {
+    fs.mkdirSync(config.logDir, { recursive: true });
   }
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return fallback;
-  }
-  try {
-    return JSON.parse(trimmed) as T;
-  } catch {
-    return fallback;
-  }
-}
 
-export function safeGet<T, R>(obj: T, path: string, defaultValue: R): R {
-  if (obj === null || obj === undefined || typeof path !== 'string') {
-    return defaultValue;
-  }
-  const keys = path.split('.').filter(Boolean);
-  let current: any = obj;
-  for (const key of keys) {
-    if (current === null || current === undefined || typeof current !== 'object') {
-      return defaultValue;
+  const logPath = path.join(config.logDir, 'app.log');
+
+  return (message: string): void => {
+    if (fs.existsSync(logPath) && fs.statSync(logPath).size > config.maxSize) {
+      for (let i = config.maxFiles - 1; i > 0; i--) {
+        const oldFile = path.join(config.logDir, `app.${i}.log`);
+        const newFile = path.join(config.logDir, `app.${i + 1}.log`);
+        if (fs.existsSync(oldFile)) fs.renameSync(oldFile, newFile);
+      }
+      fs.renameSync(logPath, path.join(config.logDir, 'app.1.log'));
     }
-    current = current[key];
-  }
-  return current === undefined ? defaultValue : (current as R);
-}
 
-export function safeDivide(numerator: number, denominator: number): number {
-  if (typeof numerator !== 'number' || typeof denominator !== 'number') {
-    throw new EdgeCaseError('Inputs must be valid numbers', 'ERR_INVALID_TYPE');
-  }
-  if (Number.isNaN(numerator) || Number.isNaN(denominator)) {
-    throw new EdgeCaseError('Cannot perform arithmetic on NaN', 'ERR_NAN_INPUT');
-  }
-  if (denominator === 0) {
-    throw new EdgeCaseError('Division by zero is undefined', 'ERR_ZERO_DIVISION');
-  }
-  return numerator / denominator;
-}
-
-export function clamp(value: number, min: number, max: number): number {
-  if (Number.isNaN(value) || Number.isNaN(min) || Number.isNaN(max)) {
-    throw new EdgeCaseError('Clamp bounds and value must be valid numbers', 'ERR_NAN_BOUNDS');
-  }
-  if (min > max) {
-    throw new EdgeCaseError('Minimum bound cannot exceed maximum bound', 'ERR_INVALID_RANGE');
-  }
-  return Math.min(Math.max(value, min), max);
-}
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}\n`;
+    fs.appendFileSync(logPath, logEntry);
+  };
+};
