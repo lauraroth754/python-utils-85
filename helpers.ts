@@ -1,31 +1,31 @@
-import * as fs from 'fs';
-import * as path from 'path';
+export type DataMap<T = unknown> = Record<string, T>;
 
-interface LoggerConfig {
-  logDir: string;
-  maxSize: number;
-  maxFiles: number;
-}
+export const getNestedValue = (obj: DataMap, path: string): unknown => {
+  return path.split('.').reduce((acc, key) => (acc && typeof acc === 'object' ? (acc as DataMap)[key] : undefined), obj);
+};
 
-export const setupLogger = (config: LoggerConfig): (message: string) => void => {
-  if (!fs.existsSync(config.logDir)) {
-    fs.mkdirSync(config.logDir, { recursive: true });
-  }
+export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  return keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
+};
 
-  const logPath = path.join(config.logDir, 'app.log');
-
-  return (message: string): void => {
-    if (fs.existsSync(logPath) && fs.statSync(logPath).size > config.maxSize) {
-      for (let i = config.maxFiles - 1; i > 0; i--) {
-        const oldFile = path.join(config.logDir, `app.${i}.log`);
-        const newFile = path.join(config.logDir, `app.${i + 1}.log`);
-        if (fs.existsSync(oldFile)) fs.renameSync(oldFile, newFile);
-      }
-      fs.renameSync(logPath, path.join(config.logDir, 'app.1.log'));
+export const cleanObject = <T extends DataMap>(obj: T): Partial<T> => {
+  return Object.entries(obj).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null) {
+      acc[key as keyof T] = value;
     }
+    return acc;
+  }, {} as Partial<T>);
+};
 
-    const timestamp = new Date().toISOString();
-    const logEntry = `[${timestamp}] ${message}\n`;
-    fs.appendFileSync(logPath, logEntry);
-  };
+export const isIterable = (value: unknown): value is Iterable<unknown> => {
+  return typeof value === 'object' && value !== null && Symbol.iterator in value;
+};
+
+export const chunk = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
 };
