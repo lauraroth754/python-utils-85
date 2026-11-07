@@ -1,46 +1,29 @@
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
+export const memoize = <T extends (...args: any[]) => any>(fn: T): T => {
+  const cache = new Map<string, ReturnType<T>>();
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key)!;
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
+};
 
-export function groupBy<T, K extends string | number | symbol>(
-  array: T[],
-  keyFn: (item: T) => K
-): Record<K, T[]> {
-  return array.reduce((acc, item) => {
-    const key = keyFn(item);
-    if (!acc[key]) {
-      acc[key] = [];
+export const batchProcess = <T, R>(items: T[], fn: (batch: T[]) => Promise<R[]>, size: number = 100): Promise<R[]> => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return Promise.all(chunks.map(fn)).then((results) => results.flat());
+};
+
+export const throttle = <T extends (...args: any[]) => void>(fn: T, wait: number): T => {
+  let last = 0;
+  return ((...args: Parameters<T>) => {
+    const now = Date.now();
+    if (now - last >= wait) {
+      last = now;
+      fn(...args);
     }
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<K, T[]>);
-}
-
-export function pick<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Pick<T, K> {
-  const result = {} as Pick<T, K>;
-  for (const key of keys) {
-    if (key in obj) {
-      result[key] = obj[key];
-    }
-  }
-  return result;
-}
-
-export function omit<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Omit<T, K> {
-  const shallowCopy = { ...obj };
-  for (const key of keys) {
-    delete shallowCopy[key];
-  }
-  return shallowCopy;
-}
+  }) as T;
+};
