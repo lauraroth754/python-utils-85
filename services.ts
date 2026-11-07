@@ -1,62 +1,60 @@
-export interface RetryOptions {
-  retries: number;
-  delay: number;
-  backoff?: number;
+export interface CleanOptions {
+  removeEmptyStrings?: boolean;
+  removeNulls?: boolean;
 }
 
-export function toSnakeCase(str: string): string {
-  return str
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/[\s-]+/g, '_')
-    .toLowerCase();
-}
+export class DataProcessorService {
+  static getNestedValue<T>(obj: Record<string, any>, path: string, defaultValue?: T): T | undefined {
+    const keys = path.split('.');
+    let current: any = obj;
 
-export function toCamelCase(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/([-_][a-z])/g, (group) =>
-      group.toUpperCase().replace('-', '').replace('_', '')
-    );
-}
-
-export function chunk<T>(array: T[], size: number): T[][] {
-  if (size <= 0) return [];
-  const result: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    result.push(array.slice(i, i + size));
-  }
-  return result;
-}
-
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions
-): Promise<T> {
-  const { retries, delay, backoff = 1.5 } = options;
-  let currentDelay = delay;
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      if (attempt === retries) break;
-      await new Promise((resolve) => setTimeout(resolve, currentDelay));
-      currentDelay *= backoff;
+    for (const key of keys) {
+      if (current === null || current === undefined || typeof current !== 'object') {
+        return defaultValue;
+      }
+      current = current[key];
     }
+
+    return current !== undefined ? (current as T) : defaultValue;
   }
 
-  throw lastError;
-}
+  static setNestedValue(obj: Record<string, any>, path: string, value: any): Record<string, any> {
+    const keys = path.split('.');
+    let current = obj;
 
-export function omit<T extends object, K extends keyof T>(
-  obj: T,
-  keys: K[]
-): Omit<T, K> {
-  const result = { ...obj };
-  for (const key of keys) {
-    delete result[key];
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i];
+      if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
+        current[key] = {};
+      }
+      current = current[key];
+    }
+
+    current[keys[keys.length - 1]] = value;
+    return obj;
   }
-  return result;
+
+  static cleanObject<T extends Record<string, any>>(obj: T, options: CleanOptions = {}): Partial<T> {
+    const { removeEmptyStrings = false, removeNulls = true } = options;
+    const result: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (removeNulls && (value === null || value === undefined)) {
+        continue;
+      }
+      if (removeEmptyStrings && typeof value === 'string' && value.trim() === '') {
+        continue;
+      }
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        const cleaned = this.cleanObject(value, options);
+        if (Object.keys(cleaned).length > 0) {
+          result[key] = cleaned;
+        }
+      } else {
+        result[key] = value;
+      }
+    }
+
+    return result as Partial<T>;
+  }
 }
