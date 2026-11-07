@@ -1,31 +1,24 @@
-export type DataMap<T = unknown> = Record<string, T>;
-
-export const getNestedValue = (obj: DataMap, path: string): unknown => {
-  return path.split('.').reduce((acc, key) => (acc && typeof acc === 'object' ? (acc as DataMap)[key] : undefined), obj);
+export type RetryOptions = {
+  maxRetries: number;
+  delayMs: number;
 };
 
-export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  return keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
-};
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = { maxRetries: 3, delayMs: 1000 }
+): Promise<T> {
+  let lastError: unknown;
 
-export const cleanObject = <T extends DataMap>(obj: T): Partial<T> => {
-  return Object.entries(obj).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null) {
-      acc[key as keyof T] = value;
+  for (let i = 0; i <= options.maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (i < options.maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, options.delayMs));
+      }
     }
-    return acc;
-  }, {} as Partial<T>);
-};
+  }
 
-export const isIterable = (value: unknown): value is Iterable<unknown> => {
-  return typeof value === 'object' && value !== null && Symbol.iterator in value;
-};
-
-export const chunk = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
+  throw lastError;
+}
