@@ -1,41 +1,56 @@
-export type Numeric = number | bigint;
-
-/**
- * Calculates the average of a collection of numbers.
- */
-export function calculateAverage(values: Numeric[]): number {
-  if (values.length === 0) {
-    return 0;
+export function range(start: number, stop?: number, step: number = 1): number[] {
+  if (stop === undefined) {
+    stop = start;
+    start = 0;
   }
-  const sum = values.reduce((acc: number, val: Numeric) => acc + Number(val), 0);
-  return sum / values.length;
-}
-
-/**
- * Splits an array into smaller chunks of a specified size.
- */
-export function chunkArray<T>(data: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < data.length; i += size) {
-    result.push(data.slice(i, i + size));
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else if (step < 0) {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
+    }
   }
   return result;
 }
 
-/**
- * Returns a debounced version of the provided function.
- */
-export function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
+export function zip<T, U>(arr1: T[], arr2: U[]): [T, U][] {
+  const length = Math.min(arr1.length, arr2.length);
+  const result: [T, U][] = [];
+  for (let i = 0; i < length; i++) {
+    result.push([arr1[i], arr2[i]]);
+  }
+  return result;
 }
 
-/**
- * Checks if a string is a valid identifier.
- */
-export function isValidIdentifier(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+export function snakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/[\s-]+/g, '_')
+    .toLowerCase();
+}
+
+export function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+}
+
+export function dictGet<T>(obj: Record<string, unknown>, path: string, defaultValue: T | null = null): T | null {
+  const keys = path.split('.');
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (current && typeof current === 'object' && key in (current as Record<string, unknown>)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return defaultValue;
+    }
+  }
+  return (current as T) ?? defaultValue;
 }
