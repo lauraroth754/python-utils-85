@@ -1,31 +1,30 @@
-export type Dict<T = any> = Record<string, T>;
+export interface ProcessData {
+  id: string;
+  value: number;
+  tags: string[];
+}
 
-export const sleep = (ms: number): Promise<void> => 
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const validateProcessData = (data: unknown): data is ProcessData => {
+  if (typeof data !== 'object' || data === null) return false;
 
-export const chunk = <T>(arr: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
+  const { id, value, tags } = data as any;
+
+  return (
+    typeof id === 'string' &&
+    typeof value === 'number' &&
+    Array.isArray(tags) &&
+    tags.every((tag) => typeof tag === 'string')
   );
-
-export const pick = <T extends Dict, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
-  keys.reduce((acc, key) => {
-    if (key in obj) acc[key] = obj[key];
-    return acc;
-  }, {} as Pick<T, K>);
-
-export const omit = <T extends Dict, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
-  const copy = { ...obj };
-  keys.forEach((key) => delete copy[key]);
-  return copy;
 };
 
-export const retry = async <T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> => {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries <= 0) throw error;
-    await sleep(delay);
-    return retry(fn, retries - 1, delay);
+export const processMainLoop = (items: unknown[]): void => {
+  for (const item of items) {
+    if (!validateProcessData(item)) {
+      console.error('Invalid data structure encountered:', item);
+      continue;
+    }
+
+    const { id, value, tags } = item;
+    console.log(`Processing ${id}: ${value} with tags ${tags.join(', ')}`);
   }
 };
