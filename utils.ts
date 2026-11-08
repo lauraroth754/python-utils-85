@@ -1,51 +1,41 @@
-export class UtilityError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly cause?: unknown
-  ) {
-    super(message);
-    this.name = 'UtilityError';
+export type Numeric = number | bigint;
+
+/**
+ * Calculates the average of a collection of numbers.
+ */
+export function calculateAverage(values: Numeric[]): number {
+  if (values.length === 0) {
+    return 0;
   }
+  const sum = values.reduce((acc: number, val: Numeric) => acc + Number(val), 0);
+  return sum / values.length;
 }
 
-export function safeParseJson<T>(jsonString: string, fallback: T): T {
-  if (typeof jsonString !== 'string' || !jsonString.trim()) {
-    return fallback;
+/**
+ * Splits an array into smaller chunks of a specified size.
+ */
+export function chunkArray<T>(data: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < data.length; i += size) {
+    result.push(data.slice(i, i + size));
   }
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch {
-    return fallback;
-  }
+  return result;
 }
 
-export function safeExecute<T>(
-  fn: () => T,
-  fallback: T,
-  onError?: (error: UtilityError) => void
-): T {
-  try {
-    return fn();
-  } catch (error) {
-    const wrapped = new UtilityError(
-      error instanceof Error ? error.message : 'Unknown execution failure',
-      'EXECUTION_FAILED',
-      error
-    );
-    onError?.(wrapped);
-    return fallback;
-  }
+/**
+ * Returns a debounced version of the provided function.
+ */
+export function debounce<T extends (...args: any[]) => void>(fn: T, delay: number): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
 }
 
-export function safeSlice<T>(arr: T[], start: number, end?: number): T[] {
-  if (!Array.isArray(arr)) {
-    return [];
-  }
-  const safeStart = Number.isInteger(start) ? Math.max(0, start) : 0;
-  const safeEnd =
-    end !== undefined && Number.isInteger(end)
-      ? Math.min(arr.length, end)
-      : arr.length;
-  return safeStart >= safeEnd ? [] : arr.slice(safeStart, safeEnd);
+/**
+ * Checks if a string is a valid identifier.
+ */
+export function isValidIdentifier(name: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
 }
