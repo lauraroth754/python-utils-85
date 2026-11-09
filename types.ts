@@ -1,49 +1,32 @@
-/**
- * Configuration options for python-like slice operations.
- */
-export interface SliceOptions {
-  /** The starting index for slicing (inclusive). */
-  start?: number | null;
-  /** The ending index for slicing (exclusive). */
-  stop?: number | null;
-  /** The step interval between slice indices. */
-  step?: number | null;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code?: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
 }
 
-/**
- * Generic key-value mapping mimicking Python dictionary operations.
- */
-export type PyDict<T = unknown> = Record<string, T>;
-
-/**
- * Execution result structure for Python process runners.
- */
-export interface PyExecResult<T = string> {
-  /** Indicates if execution succeeded without exceptions. */
+export interface Result<T> {
+  data?: T;
+  error?: PythonUtilsError;
   success: boolean;
-  /** Standard output or evaluation result. */
-  data: T | null;
-  /** Error message or stack trace if execution failed. */
-  error?: string;
-  /** Execution exit code or status indicator. */
-  code: number;
 }
 
-/**
- * Options for transforming case styles (e.g., snake_case to camelCase).
- */
-export interface CaseTransformOptions {
-  /** Whether to preserve original leading/trailing underscores. */
-  preserveUnderscores?: boolean;
-  /** Deeply convert nested object keys. */
-  recursive?: boolean;
-}
+export const handleError = (err: unknown): PythonUtilsError => {
+  if (err instanceof PythonUtilsError) return err;
+  const message = err instanceof Error ? err.message : 'Unknown python utility failure';
+  return new PythonUtilsError(message, 'INTERNAL_ERROR');
+};
 
-/**
- * Function signature for Python-style range generators.
- */
-export type RangeGenerator = (
-  start: number,
-  stop?: number,
-  step?: number
-) => Generator<number, void, unknown>;
+export const safeExecute = async <T>(fn: () => Promise<T>): Promise<Result<T>> => {
+  try {
+    const data = await fn();
+    return { data, success: true };
+  } catch (err) {
+    return { error: handleError(err), success: false };
+  }
+};
+
+export type ValidationResult = {
+  valid: boolean;
+  reason?: string;
+};
