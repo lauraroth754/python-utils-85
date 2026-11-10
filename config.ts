@@ -1,40 +1,31 @@
-export class ConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigurationError';
-  }
-}
+import fs from 'fs';
 
-export interface AppConfig {
-  host: string;
+interface Config {
   port: number;
+  debug: boolean;
+  host: string;
 }
 
-export const validateConfig = (config: unknown): AppConfig => {
-  if (!config || typeof config !== 'object') {
-    throw new ConfigurationError('Config must be an object');
-  }
-
-  const { host, port } = config as Partial<AppConfig>;
-
-  if (typeof host !== 'string' || host.trim() === '') {
-    throw new ConfigurationError('Invalid host configuration');
-  }
-
-  if (typeof port !== 'number' || port < 1 || port > 65535) {
-    throw new ConfigurationError('Port must be between 1 and 65535');
-  }
-
-  return { host, port };
+const DEFAULTS: Config = {
+  port: 8080,
+  debug: false,
+  host: 'localhost',
 };
 
-export const getSafeConfig = (raw: unknown): AppConfig => {
+export const loadConfig = (path: string): Config => {
   try {
-    return validateConfig(raw);
-  } catch (err) {
-    if (err instanceof ConfigurationError) {
-      console.error(`Config validation failure: ${err.message}`);
-    }
-    throw err;
+    if (!fs.existsSync(path)) return DEFAULTS;
+    const fileContent = fs.readFileSync(path, 'utf-8');
+    const parsed = JSON.parse(fileContent);
+    return { ...DEFAULTS, ...parsed };
+  } catch (error) {
+    console.error('Failed to load config, using defaults');
+    return DEFAULTS;
+  }
+};
+
+export const validateConfig = (config: Config): void => {
+  if (config.port < 1 || config.port > 65535) {
+    throw new Error('Invalid port range');
   }
 };
