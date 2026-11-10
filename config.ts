@@ -1,27 +1,40 @@
-import { readFileSync } from 'fs';
-
-interface Config {
-  host: string;
-  port: number;
-  debug: boolean;
+export class ConfigurationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConfigurationError';
+  }
 }
 
-const DEFAULTS: Config = {
-  host: '127.0.0.1',
-  port: 8080,
-  debug: false
-};
+export interface AppConfig {
+  host: string;
+  port: number;
+}
 
-export const loadConfig = (path?: string): Config => {
-  if (!path) return DEFAULTS;
-  try {
-    const data = JSON.parse(readFileSync(path, 'utf-8'));
-    return { ...DEFAULTS, ...data };
-  } catch (error) {
-    return DEFAULTS;
+export const validateConfig = (config: unknown): AppConfig => {
+  if (!config || typeof config !== 'object') {
+    throw new ConfigurationError('Config must be an object');
   }
+
+  const { host, port } = config as Partial<AppConfig>;
+
+  if (typeof host !== 'string' || host.trim() === '') {
+    throw new ConfigurationError('Invalid host configuration');
+  }
+
+  if (typeof port !== 'number' || port < 1 || port > 65535) {
+    throw new ConfigurationError('Port must be between 1 and 65535');
+  }
+
+  return { host, port };
 };
 
-export const validateConfig = (config: Config): boolean => {
-  return typeof config.port === 'number' && typeof config.host === 'string';
+export const getSafeConfig = (raw: unknown): AppConfig => {
+  try {
+    return validateConfig(raw);
+  } catch (err) {
+    if (err instanceof ConfigurationError) {
+      console.error(`Config validation failure: ${err.message}`);
+    }
+    throw err;
+  }
 };
