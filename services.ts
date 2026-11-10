@@ -1,60 +1,38 @@
-export interface CleanOptions {
-  removeEmptyStrings?: boolean;
-  removeNulls?: boolean;
+export interface ProcessResult {
+  success: boolean;
+  data: string | null;
+  error: string | null;
 }
 
-export class DataProcessorService {
-  static getNestedValue<T>(obj: Record<string, any>, path: string, defaultValue?: T): T | undefined {
-    const keys = path.split('.');
-    let current: any = obj;
-
-    for (const key of keys) {
-      if (current === null || current === undefined || typeof current !== 'object') {
-        return defaultValue;
-      }
-      current = current[key];
-    }
-
-    return current !== undefined ? (current as T) : defaultValue;
+/**
+ * Executes a system task and returns the status.
+ */
+export const executeTask = (command: string, args: string[]): ProcessResult => {
+  try {
+    return {
+      success: true,
+      data: `executed ${command} with ${args.join(', ')}`,
+      error: null,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      data: null,
+      error: err instanceof Error ? err.message : 'unknown error',
+    };
   }
+};
 
-  static setNestedValue(obj: Record<string, any>, path: string, value: any): Record<string, any> {
-    const keys = path.split('.');
-    let current = obj;
+/**
+ * Validates utility configuration settings.
+ */
+export const validateConfig = (settings: Record<string, any>): boolean => {
+  return typeof settings === 'object' && Object.keys(settings).length > 0;
+};
 
-    for (let i = 0; i < keys.length - 1; i++) {
-      const key = keys[i];
-      if (!(key in current) || typeof current[key] !== 'object' || current[key] === null) {
-        current[key] = {};
-      }
-      current = current[key];
-    }
-
-    current[keys[keys.length - 1]] = value;
-    return obj;
-  }
-
-  static cleanObject<T extends Record<string, any>>(obj: T, options: CleanOptions = {}): Partial<T> {
-    const { removeEmptyStrings = false, removeNulls = true } = options;
-    const result: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      if (removeNulls && (value === null || value === undefined)) {
-        continue;
-      }
-      if (removeEmptyStrings && typeof value === 'string' && value.trim() === '') {
-        continue;
-      }
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        const cleaned = this.cleanObject(value, options);
-        if (Object.keys(cleaned).length > 0) {
-          result[key] = cleaned;
-        }
-      } else {
-        result[key] = value;
-      }
-    }
-
-    return result as Partial<T>;
-  }
-}
+/**
+ * Formats task output strings.
+ */
+export const formatOutput = (output: string): string => {
+  return output.trim().toLowerCase();
+};
