@@ -1,30 +1,35 @@
-export class ServiceError extends Error {
-  constructor(public message: string, public code: number) {
-    super(message);
-    this.name = 'ServiceError';
-  }
+export interface RetryOptions {
+  maxAttempts: number;
+  backoffMs: number;
 }
 
-export interface Result<T> {
-  data?: T;
-  error?: ServiceError;
-}
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  options: RetryOptions = { maxAttempts: 3, backoffMs: 1000 }
+): Promise<T> {
+  let lastError: unknown;
 
-export async function safeExecute<T>(fn: () => Promise<T>): Promise<Result<T>> {
-  try {
-    const data = await fn();
-    return { data };
-  } catch (err) {
-    if (err instanceof Error) {
-      return { error: new ServiceError(err.message, 500) };
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (err) {
+      lastError = err;
+      if (attempt === options.maxAttempts) break;
+      await new Promise((resolve) =>
+        setTimeout(resolve, options.backoffMs * Math.pow(2, attempt - 1))
+      );
     }
-    return { error: new ServiceError('Unknown error occurred', 500) };
   }
+
+  throw lastError;
 }
 
-export const validateInput = (input: unknown): boolean => {
-  if (input === null || input === undefined) {
-    throw new ServiceError('Invalid input provided', 400);
-  }
-  return true;
+export const fetchWithRetry = async (url: string, init?: RequestInit): Promise<Response> => {
+  return withRetry(async () => {
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response;
+  });
 };
