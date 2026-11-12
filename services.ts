@@ -1,35 +1,24 @@
-export interface RetryOptions {
-  maxAttempts: number;
-  backoffMs: number;
+export interface TaskResult<T> {
+  data: T | null;
+  error: Error | null;
+  timestamp: number;
 }
 
-export async function withRetry<T>(
-  operation: () => Promise<T>,
-  options: RetryOptions = { maxAttempts: 3, backoffMs: 1000 }
-): Promise<T> {
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+export class ProcessService {
+  public async executeTask<T>(task: () => Promise<T>): Promise<TaskResult<T>> {
     try {
-      return await operation();
+      const data = await task();
+      return { data, error: null, timestamp: Date.now() };
     } catch (err) {
-      lastError = err;
-      if (attempt === options.maxAttempts) break;
-      await new Promise((resolve) =>
-        setTimeout(resolve, options.backoffMs * Math.pow(2, attempt - 1))
-      );
+      return { data: null, error: err instanceof Error ? err : new Error(String(err)), timestamp: Date.now() };
     }
   }
 
-  throw lastError;
-}
+  public formatPayload(input: Record<string, unknown>): string {
+    return JSON.stringify(input);
+  }
 
-export const fetchWithRetry = async (url: string, init?: RequestInit): Promise<Response> => {
-  return withRetry(async () => {
-    const response = await fetch(url, init);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response;
-  });
-};
+  public validateConfig(config: Record<string, any>): boolean {
+    return typeof config === 'object' && config !== null && Object.keys(config).length > 0;
+  }
+}
