@@ -1,69 +1,67 @@
-export interface ConfigOptions {
+export interface AppConfig {
+  env: 'development' | 'staging' | 'production';
   port: number;
   host: string;
   timeoutMs: number;
-  retries: number;
-  debug: boolean;
+  enableLogging: boolean;
+  maxRetries: number;
 }
 
-export class ConfigError extends Error {
-  constructor(message: string, public readonly code: string) {
-    super(message);
-    this.name = 'ConfigError';
-  }
-}
-
-const DEFAULT_CONFIG: ConfigOptions = {
+const DEFAULT_CONFIG: AppConfig = {
+  env: 'development',
   port: 8080,
   host: 'localhost',
   timeoutMs: 5000,
-  retries: 3,
-  debug: false,
+  enableLogging: true,
+  maxRetries: 3
 };
 
-export function parseConfig(input?: string | Record<string, unknown>): ConfigOptions {
-  if (input === null || input === undefined) {
-    return { ...DEFAULT_CONFIG };
+export class ConfigLoader {
+  private currentConfig: AppConfig;
+
+  constructor(initialOverrides: Partial<AppConfig> = {}) {
+    this.currentConfig = { ...DEFAULT_CONFIG, ...initialOverrides };
   }
 
-  let raw: Record<string, unknown>;
+  public loadFromEnv(envSource: Record<string, string | undefined> = process.env): AppConfig {
+    const envOverrides: Partial<AppConfig> = {};
 
-  if (typeof input === 'string') {
-    const trimmed = input.trim();
-    if (trimmed === '') {
-      return { ...DEFAULT_CONFIG };
+    if (envSource.APP_ENV) {
+      const env = envSource.APP_ENV.toLowerCase();
+      if (env === 'development' || env === 'staging' || env === 'production') {
+        envOverrides.env = env;
+      }
     }
-    try {
-      raw = JSON.parse(trimmed);
-    } catch (err) {
-      throw new ConfigError(
-        `Failed to parse config JSON: ${(err as Error).message}`,
-        'INVALID_JSON'
-      );
+    if (envSource.APP_PORT && !isNaN(Number(envSource.APP_PORT))) {
+      envOverrides.port = Number(envSource.APP_PORT);
     }
-  } else if (typeof input === 'object' && !Array.isArray(input)) {
-    raw = input;
-  } else {
-    throw new ConfigError('Config input must be a JSON string or object', 'INVALID_INPUT');
+    if (envSource.APP_HOST) {
+      envOverrides.host = envSource.APP_HOST;
+    }
+    if (envSource.APP_TIMEOUT_MS && !isNaN(Number(envSource.APP_TIMEOUT_MS))) {
+      envOverrides.timeoutMs = Number(envSource.APP_TIMEOUT_MS);
+    }
+    if (envSource.APP_LOGGING !== undefined) {
+      envOverrides.enableLogging = envSource.APP_LOGGING === 'true' || envSource.APP_LOGGING === '1';
+    }
+
+    this.currentConfig = this.mergeWithDefaults(envOverrides);
+    return this.get();
   }
 
-  const port = raw.port !== undefined ? Number(raw.port) : DEFAULT_CONFIG.port;
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new ConfigError(`Invalid port number: ${raw.port}`, 'INVALID_PORT');
+  public mergeWithDefaults(overrides: Partial<AppConfig>): AppConfig {
+    return {
+      ...DEFAULT_CONFIG,
+      ...this.currentConfig,
+      ...overrides
+    };
   }
 
-  const timeoutMs = raw.timeoutMs !== undefined ? Number(raw.timeoutMs) : DEFAULT_CONFIG.timeoutMs;
-  if (isNaN(timeoutMs) || timeoutMs < 0) {
-    throw new ConfigError(`Invalid timeout value: ${raw.timeoutMs}`, 'INVALID_TIMEOUT');
+  public get(): AppConfig {
+    return { ...this.currentConfig };
   }
 
-  const retries = raw.retries !== undefined ? Number(raw.retries) : DEFAULT_CONFIG.retries;
-  if (!Number.isInteger(retries) || retries < 0) {
-    throw new ConfigError(`Invalid retries count: ${raw.retries}`, 'INVALID_RETRIES');
+  public getValue<K extends keyof AppConfig>(key: K): AppConfig[K] {
+    return this.currentConfig[key];
   }
-
-  const host = typeof raw.host === 'string' && raw.host.trim() !== '' ? raw.host.trim() : DEFAULT_CONFIG.host;
-  const debug = typeof raw.debug === 'boolean' ? raw.debug : Boolean(raw.debug ?? DEFAULT_CONFIG.debug);
-
-  return { port, host, timeoutMs, retries, debug };
 }
