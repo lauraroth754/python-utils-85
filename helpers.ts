@@ -1,33 +1,27 @@
-export type DataMap = Record<string, unknown>;
+export const chunk = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export const debounce = <T extends (...args: any[]) => any>(fn: T, ms: number) => {
+  let timer: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>): void => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
+  };
 };
 
-export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  for (const key of keys) {
-    if (key in obj) result[key] = obj[key];
-  }
+export const omit = <T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+  const result = { ...obj };
+  keys.forEach((key) => delete result[key]);
   return result;
 };
 
-export const omit = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
-  const result = { ...obj };
-  for (const key of keys) {
-    delete result[key];
-  }
-  return result as Omit<T, K>;
-};
+export const capitalize = (str: string): string =>
+  str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
-export const getNested = (obj: DataMap, path: string): unknown => {
-  return path.split('.').reduce((acc, part) => (acc as DataMap)?.[part], obj);
-};
-
-export const isNotEmpty = (value: unknown): boolean => {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'string') return value.trim().length > 0;
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === 'object') return Object.keys(value).length > 0;
-  return true;
-};
+export const isNotEmpty = <T>(val: T | null | undefined): val is T =>
+  val !== null && val !== undefined;
