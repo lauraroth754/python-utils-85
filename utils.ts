@@ -1,34 +1,33 @@
-export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
+export type DataEntry = Record<string, unknown>;
 
-export const isEmpty = (val: unknown): boolean => {
-  if (val === null || val === undefined) return true;
-  if (typeof val === 'string' || Array.isArray(val)) return val.length === 0;
-  if (typeof val === 'object') return Object.keys(val).length === 0;
-  return false;
-};
-
-export const sleep = (ms: number): Promise<void> => 
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-export const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
-
-export const pick = <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) result[key] = obj[key];
+export const normalizeData = <T extends DataEntry>(data: T[]): T[] => {
+  return data.map((item) => {
+    const cleaned = { ...item };
+    for (const key in cleaned) {
+      if (cleaned[key] === null || cleaned[key] === undefined) {
+        delete cleaned[key];
+      }
+    }
+    return cleaned;
   });
-  return result;
 };
 
-export const partition = <T>(arr: T[], predicate: (item: T) => boolean): [T[], T[]] => {
-  return arr.reduce((acc, item) => {
-    acc[predicate(item) ? 0 : 1].push(item);
-    return acc;
-  }, [[], []] as [T[], T[]]);
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
+
+export const getNestedValue = (obj: DataEntry, path: string): unknown => {
+  return path.split('.').reduce((acc, part) => {
+    return acc && typeof acc === 'object' && part in acc ? (acc as DataEntry)[part] : undefined;
+  }, obj as unknown);
+};
+
+export const sortData = <T extends DataEntry>(data: T[], key: keyof T, asc = true): T[] => {
+  return [...data].sort((a, b) => {
+    if (a[key] < b[key]) return asc ? -1 : 1;
+    if (a[key] > b[key]) return asc ? 1 : -1;
+    return 0;
+  });
 };
