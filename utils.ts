@@ -1,39 +1,34 @@
-export type Processor<T, R> = (item: T) => R;
+export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
-export class MemoizedExecutor {
-  private cache: Map<string, any> = new Map();
+export const isEmpty = (val: unknown): boolean => {
+  if (val === null || val === undefined) return true;
+  if (typeof val === 'string' || Array.isArray(val)) return val.length === 0;
+  if (typeof val === 'object') return Object.keys(val).length === 0;
+  return false;
+};
 
-  execute<T, R>(fn: Processor<T, R>, input: T): R {
-    const key = JSON.stringify(input);
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
-    }
-    const result = fn(input);
-    this.cache.set(key, result);
-    return result;
-  }
+export const sleep = (ms: number): Promise<void> => 
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-  clear(): void {
-    this.cache.clear();
-  }
-}
-
-export function batchProcess<T, R>(items: T[], processor: Processor<T, R>, batchSize: number = 100): R[] {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const chunk = items.slice(i, i + batchSize);
-    results.push(...chunk.map(processor));
-  }
-  return results;
-}
-
-export function throttle<T extends (...args: any[]) => any>(fn: T, limit: number): (...args: Parameters<T>) => void {
-  let inThrottle: boolean = false;
+export const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      fn(...args);
-      inThrottle = true;
-      setTimeout(() => (inThrottle = false), limit);
-    }
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
   };
-}
+};
+
+export const pick = <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  const result = {} as Pick<T, K>;
+  keys.forEach((key) => {
+    if (key in obj) result[key] = obj[key];
+  });
+  return result;
+};
+
+export const partition = <T>(arr: T[], predicate: (item: T) => boolean): [T[], T[]] => {
+  return arr.reduce((acc, item) => {
+    acc[predicate(item) ? 0 : 1].push(item);
+    return acc;
+  }, [[], []] as [T[], T[]]);
+};
