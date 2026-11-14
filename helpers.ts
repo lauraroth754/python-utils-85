@@ -1,30 +1,26 @@
-export const chunkArray = <T>(array: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
-  );
-};
+import * as winston from 'winston';
+import 'winston-daily-rotate-file';
 
-export const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
-  let timer: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-};
+export const createLogger = (serviceName: string) => {
+  const transport = new winston.transports.DailyRotateFile({
+    filename: `logs/${serviceName}-%DATE%.log`,
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d'
+  });
 
-export const groupBy = <T, K extends keyof any>(list: T[], key: (item: T) => K) => {
-  return list.reduce((acc, item) => {
-    const group = key(item);
-    if (!acc[group]) acc[group] = [];
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<K, T[]>);
-};
-
-export const sleep = (ms: number): Promise<void> => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
-export const clamp = (value: number, min: number, max: number): number => {
-  return Math.min(Math.max(value, min), max);
+  return winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.json()
+    ),
+    transports: [
+      transport,
+      new winston.transports.Console({
+        format: winston.format.simple()
+      })
+    ]
+  });
 };
