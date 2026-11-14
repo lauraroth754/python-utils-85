@@ -1,24 +1,33 @@
-export interface TaskResult<T> {
+export class ServiceError extends Error {
+  constructor(public message: string, public code: number) {
+    super(message);
+    this.name = 'ServiceError';
+  }
+}
+
+export interface ServiceResult<T> {
   data: T | null;
-  error: Error | null;
-  timestamp: number;
+  error: ServiceError | null;
 }
 
-export class ProcessService {
-  public async executeTask<T>(task: () => Promise<T>): Promise<TaskResult<T>> {
-    try {
-      const data = await task();
-      return { data, error: null, timestamp: Date.now() };
-    } catch (err) {
-      return { data: null, error: err instanceof Error ? err : new Error(String(err)), timestamp: Date.now() };
-    }
+export const safeExecute = async <T>(
+  fn: () => Promise<T>,
+  errorMessage: string = 'execution failed'
+): Promise<ServiceResult<T>> => {
+  try {
+    const data = await fn();
+    return { data, error: null };
+  } catch (err) {
+    const error = err instanceof ServiceError 
+      ? err 
+      : new ServiceError(errorMessage, 500);
+    return { data: null, error };
   }
+};
 
-  public formatPayload(input: Record<string, unknown>): string {
-    return JSON.stringify(input);
+export const validateResponse = <T>(data: unknown): T => {
+  if (data === null || data === undefined) {
+    throw new ServiceError('empty response body', 204);
   }
-
-  public validateConfig(config: Record<string, any>): boolean {
-    return typeof config === 'object' && config !== null && Object.keys(config).length > 0;
-  }
-}
+  return data as T;
+};
