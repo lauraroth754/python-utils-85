@@ -1,32 +1,26 @@
-export type DataMap = Record<string, unknown>;
+import { createLogger, format, transports, Logger } from 'winston';
+import 'winston-daily-rotate-file';
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
-};
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.json()
+);
 
-export const sanitizeData = (data: DataMap): DataMap => {
-  return Object.entries(data).reduce((acc, [key, value]) => {
-    if (value !== null && value !== undefined) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as DataMap);
-};
-
-export const normalizeKeys = (data: DataMap): DataMap => {
-  return Object.keys(data).reduce((acc, key) => {
-    const normalized = key.toLowerCase().replace(/\s+/g, '_');
-    acc[normalized] = data[key];
-    return acc;
-  }, {} as DataMap);
-};
-
-export const pluck = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) {
-      result[key] = obj[key];
-    }
+export const setupLogger = (filename: string): Logger => {
+  return createLogger({
+    level: 'info',
+    format: logFormat,
+    transports: [
+      new transports.Console(),
+      new transports.DailyRotateFile({
+        filename: `${filename}-%DATE%.log`,
+        datePattern: 'YYYY-MM-DD',
+        zippedArchive: true,
+        maxSize: '20m',
+        maxFiles: '14d'
+      })
+    ]
   });
-  return result;
 };
+
+export const logger = setupLogger('app');
