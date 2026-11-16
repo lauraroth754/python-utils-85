@@ -1,26 +1,30 @@
-import * as winston from 'winston';
-import 'winston-daily-rotate-file';
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
+}
 
-export const createLogger = (serviceName: string) => {
-  const transport = new winston.transports.DailyRotateFile({
-    filename: `logs/${serviceName}-%DATE%.log`,
-    datePattern: 'YYYY-MM-DD',
-    zippedArchive: true,
-    maxSize: '20m',
-    maxFiles: '14d'
-  });
+export const safeExecute = <T>(fn: () => T, fallback: T): T => {
+  try {
+    return fn();
+  } catch (error) {
+    return fallback;
+  }
+};
 
-  return winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    ),
-    transports: [
-      transport,
-      new winston.transports.Console({
-        format: winston.format.simple()
-      })
-    ]
-  });
+export const validateConfig = (config: Record<string, unknown>): void => {
+  if (!config || typeof config !== 'object') {
+    throw new PythonUtilsError('invalid configuration object', 'ERR_INVALID_CONFIG');
+  }
+  if (!('pythonPath' in config)) {
+    throw new PythonUtilsError('missing required python path', 'ERR_MISSING_PATH');
+  }
+};
+
+export const sanitizePath = (path: string): string => {
+  if (typeof path !== 'string' || path.trim() === '') {
+    throw new PythonUtilsError('path must be non-empty string', 'ERR_INVALID_PATH');
+  }
+  return path.replace(/[\x00-\x1F\x7F]/g, '');
 };
