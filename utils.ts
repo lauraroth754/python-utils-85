@@ -1,32 +1,34 @@
-export const memoize = <T extends (...args: any[]) => any>(fn: T): T => {
-  const cache = new Map<string, ReturnType<T>>();
-  return ((...args: Parameters<T>): ReturnType<T> => {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) return cache.get(key)!;
-    const result = fn(...args);
-    cache.set(key, result);
-    return result;
-  }) as T;
-};
-
-export const batchProcess = async <T, R>(
-  items: T[],
-  processor: (item: T) => Promise<R>,
-  concurrency: number = 5
-): Promise<R[]> => {
-  const results: R[] = [];
-  for (let i = 0; i < items.length; i += concurrency) {
-    const batch = items.slice(i, i + concurrency);
-    const batchResults = await Promise.all(batch.map(processor));
-    results.push(...batchResults);
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
   }
-  return results;
-};
+}
 
-export const debounce = <T extends (...args: any[]) => any>(fn: T, wait: number) => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), wait);
-  };
+export const executePythonCommand = async (command: string | null | undefined): Promise<string> => {
+  if (!command || command.trim() === '') {
+    throw new PythonUtilsError('Command cannot be empty or null', 'INVALID_COMMAND');
+  }
+
+  try {
+    const response = await fetch('/api/python/execute', {
+      method: 'POST',
+      body: JSON.stringify({ command }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new PythonUtilsError('Server returned error status', 'SERVER_ERROR');
+    }
+
+    const data = await response.json();
+    if (typeof data.result !== 'string') {
+      throw new PythonUtilsError('Malformed response data format', 'MALFORMED_RESPONSE');
+    }
+
+    return data.result;
+  } catch (error) {
+    if (error instanceof PythonUtilsError) throw error;
+    throw new PythonUtilsError('Unexpected connection failure', 'CONNECTION_FAILURE');
+  }
 };
