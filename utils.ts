@@ -1,34 +1,28 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
-}
+export const chunk = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-export const executePythonCommand = async (command: string | null | undefined): Promise<string> => {
-  if (!command || command.trim() === '') {
-    throw new PythonUtilsError('Command cannot be empty or null', 'INVALID_COMMAND');
-  }
-
-  try {
-    const response = await fetch('/api/python/execute', {
-      method: 'POST',
-      body: JSON.stringify({ command }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      throw new PythonUtilsError('Server returned error status', 'SERVER_ERROR');
-    }
-
-    const data = await response.json();
-    if (typeof data.result !== 'string') {
-      throw new PythonUtilsError('Malformed response data format', 'MALFORMED_RESPONSE');
-    }
-
-    return data.result;
-  } catch (error) {
-    if (error instanceof PythonUtilsError) throw error;
-    throw new PythonUtilsError('Unexpected connection failure', 'CONNECTION_FAILURE');
-  }
+export const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
 };
+
+export const pick = <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
+
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export const isEmpty = (val: any): boolean =>
+  val === null ||
+  val === undefined ||
+  (typeof val === 'string' && val.trim() === '') ||
+  (Array.isArray(val) && val.length === 0) ||
+  (typeof val === 'object' && Object.keys(val).length === 0);
