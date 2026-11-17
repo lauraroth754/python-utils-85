@@ -1,33 +1,40 @@
-export class ServiceError extends Error {
-  constructor(public message: string, public code: number) {
-    super(message);
-    this.name = 'ServiceError';
-  }
+interface ProcessData {
+  id: string;
+  value: number;
 }
 
-export interface ServiceResult<T> {
-  data: T | null;
-  error: ServiceError | null;
-}
+const isValidData = (item: any): item is ProcessData => {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    typeof item.id === 'string' &&
+    typeof item.value === 'number' &&
+    item.value >= 0
+  );
+};
 
-export const safeExecute = async <T>(
-  fn: () => Promise<T>,
-  errorMessage: string = 'execution failed'
-): Promise<ServiceResult<T>> => {
-  try {
-    const data = await fn();
-    return { data, error: null };
-  } catch (err) {
-    const error = err instanceof ServiceError 
-      ? err 
-      : new ServiceError(errorMessage, 500);
-    return { data: null, error };
+export const processInput = (items: unknown[]): void => {
+  for (const item of items) {
+    if (!isValidData(item)) {
+      console.error('Invalid input encountered:', item);
+      continue;
+    }
+
+    try {
+      const result = item.value * 2;
+      console.log(`Processed ${item.id}: ${result}`);
+    } catch (err) {
+      console.error(`Execution failure for ${item.id}:`, err);
+    }
   }
 };
 
-export const validateResponse = <T>(data: unknown): T => {
-  if (data === null || data === undefined) {
-    throw new ServiceError('empty response body', 204);
-  }
-  return data as T;
-};
+const batch: unknown[] = [
+  { id: 'alpha', value: 10 },
+  { id: 'beta', value: -1 },
+  { id: 'gamma', value: 20 },
+  null,
+  {}
+];
+
+processInput(batch);
