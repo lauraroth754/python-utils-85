@@ -1,30 +1,37 @@
-export class PythonUtilsError extends Error {
-  constructor(public message: string, public code: string) {
-    super(message);
-    this.name = 'PythonUtilsError';
-  }
-}
-
-export const safeExecute = <T>(fn: () => T, fallback: T): T => {
-  try {
-    return fn();
-  } catch (error) {
-    return fallback;
-  }
+export const memoize = <T extends (...args: any[]) => any>(fn: T): T => {
+  const cache = new Map<string, ReturnType<T>>();
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key)!;
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
 };
 
-export const validateConfig = (config: Record<string, unknown>): void => {
-  if (!config || typeof config !== 'object') {
-    throw new PythonUtilsError('invalid configuration object', 'ERR_INVALID_CONFIG');
-  }
-  if (!('pythonPath' in config)) {
-    throw new PythonUtilsError('missing required python path', 'ERR_MISSING_PATH');
-  }
+export const throttle = <T extends (...args: any[]) => void>(fn: T, limit: number): T => {
+  let inThrottle = false;
+  return ((...args: Parameters<T>) => {
+    if (!inThrottle) {
+      fn(...args);
+      inThrottle = true;
+      setTimeout(() => (inThrottle = false), limit);
+    }
+  }) as T;
 };
 
-export const sanitizePath = (path: string): string => {
-  if (typeof path !== 'string' || path.trim() === '') {
-    throw new PythonUtilsError('path must be non-empty string', 'ERR_INVALID_PATH');
+export const chunk = <T>(array: T[], size: number): T[][] => {
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
   }
-  return path.replace(/[\x00-\x1F\x7F]/g, '');
+  return result;
+};
+
+export const debounce = <T extends (...args: any[]) => void>(fn: T, delay: number): T => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return ((...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  }) as T;
 };
