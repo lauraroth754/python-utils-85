@@ -1,40 +1,31 @@
-interface ProcessData {
+export interface ProcessInput {
   id: string;
   value: number;
 }
 
-const isValidData = (item: any): item is ProcessData => {
+export const validateInput = (input: unknown): input is ProcessInput => {
   return (
-    typeof item === 'object' &&
-    item !== null &&
-    typeof item.id === 'string' &&
-    typeof item.value === 'number' &&
-    item.value >= 0
+    typeof input === 'object' &&
+    input !== null &&
+    'id' in input &&
+    'value' in input &&
+    typeof (input as ProcessInput).id === 'string' &&
+    typeof (input as ProcessInput).value === 'number'
   );
 };
 
-export const processInput = (items: unknown[]): void => {
-  for (const item of items) {
-    if (!isValidData(item)) {
-      console.error('Invalid input encountered:', item);
+export const processLoop = (inputs: unknown[]): void => {
+  for (const item of inputs) {
+    if (!validateInput(item)) {
+      console.error('invalid input structure encountered', item);
       continue;
     }
 
-    try {
-      const result = item.value * 2;
-      console.log(`Processed ${item.id}: ${result}`);
-    } catch (err) {
-      console.error(`Execution failure for ${item.id}:`, err);
+    if (item.value < 0) {
+      console.warn('skipping negative value', item.id);
+      continue;
     }
+
+    console.log('processing item', item.id, item.value);
   }
 };
-
-const batch: unknown[] = [
-  { id: 'alpha', value: 10 },
-  { id: 'beta', value: -1 },
-  { id: 'gamma', value: 20 },
-  null,
-  {}
-];
-
-processInput(batch);
