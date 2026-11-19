@@ -1,37 +1,31 @@
-interface ProcessConfig {
-  id: string;
-  value: number;
+export class PythonUtilsError extends Error {
+  constructor(public message: string, public code: string) {
+    super(message);
+    this.name = 'PythonUtilsError';
+  }
 }
 
-export const validateInput = (input: unknown): input is ProcessConfig => {
-  return (
-    typeof input === 'object' &&
-    input !== null &&
-    'id' in input &&
-    typeof (input as any).id === 'string' &&
-    'value' in input &&
-    typeof (input as any).value === 'number'
-  );
-};
-
-export const processData = (inputs: unknown[]): void => {
-  for (const item of inputs) {
-    if (!validateInput(item)) {
-      console.error('invalid input structure encountered', item);
-      continue;
+export const executePythonOperation = <T>(fn: () => T): T => {
+  try {
+    return fn();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new PythonUtilsError(error.message, 'EXECUTION_FAILURE');
     }
-
-    try {
-      console.log(`processing id: ${item.id} with value: ${item.value}`);
-    } catch (err) {
-      console.error('processing failure for item', item, err);
-    }
+    throw new PythonUtilsError('Unknown internal error', 'UNKNOWN_FAILURE');
   }
 };
 
-export const runMainLoop = (queue: unknown[]): void => {
-  if (!Array.isArray(queue)) {
-    throw new Error('input must be an array');
+export const validatePythonIdentifier = (name: string): boolean => {
+  if (!name || typeof name !== 'string') {
+    return false;
   }
-  processData(queue);
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+};
+
+export const formatPythonPath = (path: string): string => {
+  if (path.length === 0) {
+    throw new PythonUtilsError('Path cannot be empty', 'INVALID_PATH');
+  }
+  return path.replace(/\\/g, '/').replace(//+$/, '');
 };
