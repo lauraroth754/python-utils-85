@@ -1,33 +1,22 @@
-import * as fs from 'fs';
-import * as path from 'path';
+export const chunkArray = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-interface LoggerOptions {
-  logDir: string;
-  maxSize: number;
-  maxFiles: number;
-}
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
-export const setupLogger = (options: LoggerOptions) => {
-  if (!fs.existsSync(options.logDir)) {
-    fs.mkdirSync(options.logDir, { recursive: true });
-  }
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> =>
+  keys.reduce((acc, key) => {
+    if (key in obj) acc[key] = obj[key];
+    return acc;
+  }, {} as Pick<T, K>);
 
-  return (message: string) => {
-    const logFile = path.join(options.logDir, 'app.log');
-    const timestamp = new Date().toISOString();
-    const entry = `[${timestamp}] ${message}\n`;
+export const getEnv = (key: string, fallback: string): string =>
+  process.env[key] ?? fallback;
 
-    if (fs.existsSync(logFile)) {
-      const stats = fs.statSync(logFile);
-      if (stats.size > options.maxSize) {
-        for (let i = options.maxFiles - 1; i >= 0; i--) {
-          const oldPath = i === 0 ? logFile : `${logFile}.${i}`;
-          const newPath = `${logFile}.${i + 1}`;
-          if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
-        }
-      }
-    }
+export const isObject = (val: unknown): val is Record<string, unknown> =>
+  val !== null && typeof val === 'object' && !Array.isArray(val);
 
-    fs.appendFileSync(logFile, entry);
-  };
-};
+export const clamp = (val: number, min: number, max: number): number =>
+  Math.min(Math.max(val, min), max);
