@@ -1,29 +1,38 @@
-export const chunk = <T>(array: T[], size: number): T[][] =>
-  Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
-    array.slice(i * size, i * size + size)
+export type Processor = (data: any) => any;
+
+export interface Config {
+  readonly verbose: boolean;
+  readonly timeout: number;
+}
+
+export const sanitize = (input: string): string => {
+  return input.trim().replace(/\s+/g, ' ');
+};
+
+export const execute = async <T>(
+  task: () => Promise<T>,
+  retries: number = 3
+): Promise<T> => {
+  try {
+    return await task();
+  } catch (err) {
+    if (retries > 0) {
+      return execute(task, retries - 1);
+    }
+    throw err;
+  }
+};
+
+export const chunkArray = <T>(arr: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size)
   );
-
-export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
-  let timeout: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<F>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => fn(...args), delay);
-  };
 };
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) result[key] = obj[key];
-  });
-  return result;
+export const isNotEmpty = <T>(value: T | null | undefined): value is T => {
+  return value !== null && value !== undefined;
 };
 
-export const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-export const slugify = (str: string): string =>
-  str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '');
+export const formatTimestamp = (date: Date = new Date()): string => {
+  return date.toISOString();
+};
