@@ -12,29 +12,21 @@ export const deepClone = <T>(obj: T): T => {
   return cloned;
 };
 
-export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) result[key] = obj[key];
-  });
-  return result;
-};
-
-export const isEmpty = (value: unknown): boolean => {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value as object).length === 0;
-  return false;
-};
-
-export const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, any> => {
-  return Object.keys(obj).reduce((acc, key) => {
-    const pre = prefix.length ? `${prefix}.` : '';
-    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-      Object.assign(acc, flattenObject(obj[key], pre + key));
-    } else {
-      acc[pre + key] = obj[key];
+export const sanitizeData = (data: Record<string, unknown>): Record<string, unknown> => {
+  return Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      acc[key] = value;
     }
     return acc;
-  }, {} as Record<string, any>);
+  }, {} as Record<string, unknown>);
+};
+
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
+
+export const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
