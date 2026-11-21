@@ -1,38 +1,40 @@
-export type Processor = (data: any) => any;
+export type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
-export interface Config {
-  readonly verbose: boolean;
-  readonly timeout: number;
-}
-
-export const sanitize = (input: string): string => {
-  return input.trim().replace(/\s+/g, ' ');
-};
-
-export const execute = async <T>(
-  task: () => Promise<T>,
-  retries: number = 3
-): Promise<T> => {
-  try {
-    return await task();
-  } catch (err) {
-    if (retries > 0) {
-      return execute(task, retries - 1);
+export const deepClone = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(deepClone) as unknown as T;
+  const cloned = {} as T;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = deepClone(obj[key]);
     }
-    throw err;
   }
+  return cloned;
 };
 
-export const chunkArray = <T>(arr: T[], size: number): T[][] => {
-  return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );
+export const pick = <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  const result = {} as Pick<T, K>;
+  keys.forEach((key) => {
+    if (key in obj) result[key] = obj[key];
+  });
+  return result;
 };
 
-export const isNotEmpty = <T>(value: T | null | undefined): value is T => {
-  return value !== null && value !== undefined;
+export const isEmpty = (value: unknown): boolean => {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string' || Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value as object).length === 0;
+  return false;
 };
 
-export const formatTimestamp = (date: Date = new Date()): string => {
-  return date.toISOString();
+export const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, any> => {
+  return Object.keys(obj).reduce((acc, key) => {
+    const pre = prefix.length ? `${prefix}.` : '';
+    if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+      Object.assign(acc, flattenObject(obj[key], pre + key));
+    } else {
+      acc[pre + key] = obj[key];
+    }
+    return acc;
+  }, {} as Record<string, any>);
 };
