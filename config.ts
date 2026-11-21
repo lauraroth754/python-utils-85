@@ -1,31 +1,22 @@
-import fs from 'fs';
-
 export interface AppConfig {
   host: string;
   port: number;
   debug: boolean;
 }
 
-const DEFAULT_CONFIG: AppConfig = {
-  host: '127.0.0.1',
+const defaults: AppConfig = {
+  host: 'localhost',
   port: 8080,
   debug: false,
 };
 
-export function loadConfig(path?: string): AppConfig {
-  if (!path || !fs.existsSync(path)) {
-    return { ...DEFAULT_CONFIG };
-  }
+export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
+  ...defaults,
+  ...overrides,
+});
 
-  try {
-    const fileContent = fs.readFileSync(path, 'utf-8');
-    const parsed: Partial<AppConfig> = JSON.parse(fileContent);
-    return { ...DEFAULT_CONFIG, ...parsed };
-  } catch (error) {
-    return { ...DEFAULT_CONFIG };
-  }
-}
-
-export function validateConfig(config: AppConfig): boolean {
-  return typeof config.port === 'number' && typeof config.host === 'string';
-}
+export const getEnvConfig = (): AppConfig => ({
+  host: process.env.APP_HOST ?? defaults.host,
+  port: parseInt(process.env.APP_PORT ?? '', 10) || defaults.port,
+  debug: process.env.APP_DEBUG === 'true',
+});
