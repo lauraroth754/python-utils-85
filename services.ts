@@ -1,31 +1,30 @@
-export interface ProcessInput {
+interface ProcessConfig {
   id: string;
-  value: number;
+  timeout: number;
 }
 
-export const validateInput = (input: unknown): input is ProcessInput => {
-  return (
-    typeof input === 'object' &&
-    input !== null &&
-    'id' in input &&
-    'value' in input &&
-    typeof (input as ProcessInput).id === 'string' &&
-    typeof (input as ProcessInput).value === 'number'
-  );
-};
+export class ServiceRegistry {
+  private registry: Map<string, ProcessConfig> = new Map();
 
-export const processLoop = (inputs: unknown[]): void => {
-  for (const item of inputs) {
-    if (!validateInput(item)) {
-      console.error('invalid input structure encountered', item);
-      continue;
-    }
-
-    if (item.value < 0) {
-      console.warn('skipping negative value', item.id);
-      continue;
-    }
-
-    console.log('processing item', item.id, item.value);
+  public register(id: string, timeout: number = 3000): void {
+    this.registry.set(id, { id, timeout });
   }
-};
+
+  public unregister(id: string): boolean {
+    return this.registry.delete(id);
+  }
+
+  public getStatus(id: string): ProcessConfig | undefined {
+    return this.registry.get(id);
+  }
+
+  public listServices(): ProcessConfig[] {
+    return Array.from(this.registry.values());
+  }
+
+  public clearAll(): void {
+    this.registry.clear();
+  }
+}
+
+export const globalRegistry = new ServiceRegistry();
