@@ -1,49 +1,46 @@
 # python-utils-85
 
-A collection of lightweight, high-performance TypeScript utility functions designed to bridge the gap between common Python idioms and JavaScript runtime environments. This library streamlines data manipulation and object handling by providing robust, type-safe alternatives to standard Pythonic patterns.
+A collection of high-performance TypeScript utilities designed to bridge the gap between Python-style ergonomics and native JavaScript environments. This library streamlines data manipulation and type-safe iteration for complex engineering projects.
 
 ## Features
 
-*   **Dict-like Object Iterators:** Implements `items()`, `keys()`, and `values()` helpers that mirror Python dictionary behavior for seamless object traversal.
-*   **Safe Range Generator:** Provides a flexible `range(start, stop, step)` function that yields numbers just like its Python counterpart, perfect for `for-of` loops.
-*   **Type-Strict Filtering:** Includes highly optimized array utilities like `compact()` and `groupBy()` with full TypeScript generics support.
-*   **Zero-Dependency Core:** Built from the ground up with no external dependencies, ensuring a minimal bundle size for production environments.
+*   **Pythonic Iterables:** Includes robust `range`, `enumerate`, and `zip` functions that mirror Python’s intuitive API while maintaining TypeScript type safety.
+*   **Lazy Evaluation:** Implements efficient generator helpers to handle large datasets without exhausting memory buffers.
+*   **Deep Merge Utilities:** Provides reliable recursive object merging with explicit support for nested arrays and circular references.
+*   **Type-Safe Casting:** Offers strict validation helpers to ensure data integrity when interfacing with untrusted JSON payloads or external APIs.
 
 ## Installation
 
-Install the package via npm:
+Install the package via npm or yarn:
 
 ```bash
 npm install python-utils-85
-```
-
-Or using yarn:
-
-```bash
+# or
 yarn add python-utils-85
 ```
 
 ## Basic Usage
 
-Import the utilities directly into your project to start writing more readable, Python-inspired TypeScript code.
+Import the utilities and leverage them in your data transformation pipelines:
 
 ```typescript
-import { range, items } from 'python-utils-85';
+import { range, enumerate, zip } from 'python-utils-85';
 
-// Using range() for iteration
-for (const i of range(0, 10, 2)) {
-  console.log(i); // Outputs: 0, 2, 4, 6, 8
+// Create a range and enumerate
+for (const [index, value] of enumerate(range(0, 10, 2))) {
+  console.log(`Index ${index}: ${value}`);
 }
 
-// Accessing object properties like a dictionary
-const user = { name: 'Alice', age: 30 };
-for (const [key, value] of items(user)) {
-  console.log(`${key}: ${value}`);
-}
+// Zip two arrays together safely
+const keys = ['id', 'name'];
+const values = [101, 'DevUtils'];
+
+const map = Object.fromEntries(zip(keys, values));
+console.log(map); // { id: 101, name: 'DevUtils' }
 ```
 
 ## License
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Distributed under the MIT License. See `LICENSE` for more information.
