@@ -1,22 +1,27 @@
-export interface AppConfig {
-  host: string;
+import { readFileSync } from 'fs';
+
+export interface Config {
   port: number;
   debug: boolean;
+  host: string;
 }
 
-const defaults: AppConfig = {
-  host: 'localhost',
+const defaults: Config = {
   port: 8080,
   debug: false,
+  host: 'localhost'
 };
 
-export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => ({
-  ...defaults,
-  ...overrides,
-});
+export const loadConfig = (path?: string): Config => {
+  if (!path) return defaults;
 
-export const getEnvConfig = (): AppConfig => ({
-  host: process.env.APP_HOST ?? defaults.host,
-  port: parseInt(process.env.APP_PORT ?? '', 10) || defaults.port,
-  debug: process.env.APP_DEBUG === 'true',
-});
+  try {
+    const raw = readFileSync(path, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return { ...defaults, ...parsed };
+  } catch (error) {
+    return defaults;
+  }
+};
+
+export const config = loadConfig(process.env.CONFIG_PATH);
