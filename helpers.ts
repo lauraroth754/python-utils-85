@@ -1,32 +1,28 @@
-export type DataMap = Record<string, unknown>;
+export type PythonVersion = '2.7' | '3.8' | '3.11' | '3.12';
 
-export const deepClone = <T>(obj: T): T => {
-  return JSON.parse(JSON.stringify(obj));
+export interface ExecutionResult {
+  output: string;
+  exitCode: number;
+}
+
+export const sanitizePath = (path: string): string => {
+  return path.replace(/\\/g, '/').replace(//+$/, '');
 };
 
-export const pick = <T extends DataMap, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
-  keys.forEach((key) => {
-    if (key in obj) {
-      result[key] = obj[key];
-    }
-  });
-  return result;
+export const validateVersion = (version: string): version is PythonVersion => {
+  const validVersions: PythonVersion[] = ['2.7', '3.8', '3.11', '3.12'];
+  return (validVersions as string[]).includes(version);
 };
 
-export const groupBy = <T>(arr: T[], key: keyof T): Record<string, T[]> => {
-  return arr.reduce((acc, item) => {
-    const group = String(item[key]);
-    if (!acc[group]) {
-      acc[group] = [];
-    }
-    acc[group].push(item);
-    return acc;
-  }, {} as Record<string, T[]>);
+export const formatCommand = (scriptPath: string, args: string[] = []): string => {
+  const parts = ['python3', scriptPath, ...args];
+  return parts.join(' ');
 };
 
-export const isEmpty = (obj: unknown): boolean => {
-  if (obj === null || obj === undefined) return true;
-  if (typeof obj !== 'object') return false;
-  return Object.keys(obj as object).length === 0;
+export const parseOutput = (raw: string): ExecutionResult => {
+  const lines = raw.trim().split('\n');
+  return {
+    output: lines.slice(0, -1).join('\n'),
+    exitCode: parseInt(lines[lines.length - 1], 10) || 0
+  };
 };
