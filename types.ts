@@ -1,32 +1,29 @@
 export class PythonUtilsError extends Error {
-  constructor(public message: string, public code?: string) {
+  constructor(public message: string, public code: string, public originalError?: unknown) {
     super(message);
     this.name = 'PythonUtilsError';
   }
 }
 
 export interface Result<T> {
-  data?: T;
-  error?: PythonUtilsError;
-  success: boolean;
+  data: T | null;
+  error: PythonUtilsError | null;
 }
 
-export const handleError = (err: unknown): PythonUtilsError => {
-  if (err instanceof PythonUtilsError) return err;
-  const message = err instanceof Error ? err.message : 'Unknown python utility failure';
-  return new PythonUtilsError(message, 'INTERNAL_ERROR');
-};
-
-export const safeExecute = async <T>(fn: () => Promise<T>): Promise<Result<T>> => {
+export const handleExecution = async <T>(fn: () => Promise<T>): Promise<Result<T>> => {
   try {
     const data = await fn();
-    return { data, success: true };
-  } catch (err) {
-    return { error: handleError(err), success: false };
+    return { data, error: null };
+  } catch (err: unknown) {
+    const error = err instanceof PythonUtilsError 
+      ? err 
+      : new PythonUtilsError('execution failure', 'EXEC_ERR', err);
+    return { data: null, error };
   }
 };
 
-export type ValidationResult = {
-  valid: boolean;
-  reason?: string;
+export const validateInput = (value: unknown): void => {
+  if (value === null || value === undefined) {
+    throw new PythonUtilsError('null or undefined input', 'INVALID_INPUT');
+  }
 };
