@@ -1,28 +1,23 @@
-export type PythonVersion = '2.7' | '3.8' | '3.11' | '3.12';
-
-export interface ExecutionResult {
-  output: string;
-  exitCode: number;
+export interface Config {
+  port: number;
+  host: string;
+  debug: boolean;
 }
 
-export const sanitizePath = (path: string): string => {
-  return path.replace(/\\/g, '/').replace(//+$/, '');
+const DEFAULTS: Config = {
+  port: 8080,
+  host: 'localhost',
+  debug: false
 };
 
-export const validateVersion = (version: string): version is PythonVersion => {
-  const validVersions: PythonVersion[] = ['2.7', '3.8', '3.11', '3.12'];
-  return (validVersions as string[]).includes(version);
+export const loadConfig = (overrides: Partial<Config> = {}): Config => {
+  return { ...DEFAULTS, ...overrides };
 };
 
-export const formatCommand = (scriptPath: string, args: string[] = []): string => {
-  const parts = ['python3', scriptPath, ...args];
-  return parts.join(' ');
-};
-
-export const parseOutput = (raw: string): ExecutionResult => {
-  const lines = raw.trim().split('\n');
+export const getEnvConfig = (): Config => {
   return {
-    output: lines.slice(0, -1).join('\n'),
-    exitCode: parseInt(lines[lines.length - 1], 10) || 0
+    port: parseInt(process.env.PORT || '') || DEFAULTS.port,
+    host: process.env.HOST || DEFAULTS.host,
+    debug: process.env.DEBUG === 'true'
   };
 };
