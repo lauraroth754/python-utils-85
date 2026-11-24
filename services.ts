@@ -1,30 +1,32 @@
-interface ProcessConfig {
-  id: string;
-  timeout: number;
+export interface DataProcessor<T> {
+  transform: (data: unknown) => T;
+  validate: (data: T) => boolean;
 }
 
-export class ServiceRegistry {
-  private registry: Map<string, ProcessConfig> = new Map();
-
-  public register(id: string, timeout: number = 3000): void {
-    this.registry.set(id, { id, timeout });
+export const sanitizeData = <T>(data: unknown, processor: DataProcessor<T>): T | null => {
+  try {
+    const transformed = processor.transform(data);
+    return processor.validate(transformed) ? transformed : null;
+  } catch (error) {
+    return null;
   }
+};
 
-  public unregister(id: string): boolean {
-    return this.registry.delete(id);
-  }
+export const batchProcess = <T, R>(items: T[], fn: (item: T) => R): R[] => {
+  return items.reduce((acc: R[], item) => {
+    const result = fn(item);
+    return result !== null ? [...acc, result] : acc;
+  }, []);
+};
 
-  public getStatus(id: string): ProcessConfig | undefined {
-    return this.registry.get(id);
-  }
+export const chunkArray = <T>(array: T[], size: number): T[][] => {
+  return Array.from({ length: Math.ceil(array.length / size) }, (_, i) =>
+    array.slice(i * size, i * size + size)
+  );
+};
 
-  public listServices(): ProcessConfig[] {
-    return Array.from(this.registry.values());
-  }
-
-  public clearAll(): void {
-    this.registry.clear();
-  }
-}
-
-export const globalRegistry = new ServiceRegistry();
+export const flattenDeep = <T>(array: any[]): T[] => {
+  return array.reduce((acc, val) => 
+    Array.isArray(val) ? acc.concat(flattenDeep(val)) : acc.concat(val), 
+  []);
+};
