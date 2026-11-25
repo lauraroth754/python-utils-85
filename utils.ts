@@ -1,42 +1,35 @@
-export type DataEntry = Record<string, unknown>;
+export type Processor<T> = (item: T) => T;
 
-export const pick = <T extends DataEntry, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  return keys.reduce((acc, key) => {
-    if (key in obj) {
-      acc[key] = obj[key];
+export class MemoizedExecutor {
+  private cache = new Map<string, any>();
+
+  public execute<T>(key: string, fn: Processor<T>, data: T): T {
+    if (this.cache.has(key)) {
+      return this.cache.get(key);
     }
-    return acc;
-  }, {} as Pick<T, K>);
-};
-
-export const omit = <T extends DataEntry, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
-  const result = { ...obj };
-  keys.forEach((key) => {
-    delete result[key];
-  });
-  return result as Omit<T, K>;
-};
-
-export const isEmpty = (obj: DataEntry): boolean => {
-  return Object.keys(obj).length === 0;
-};
-
-export const parseData = <T>(data: unknown, fallback: T): T => {
-  try {
-    return (data as T) ?? fallback;
-  } catch {
-    return fallback;
+    const result = fn(data);
+    this.cache.set(key, result);
+    return result;
   }
+
+  public clearCache(): void {
+    this.cache.clear();
+  }
+}
+
+export const batchProcess = <T>(items: T[], fn: Processor<T>, chunkSize: number = 100): T[] => {
+  const results: T[] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    results.push(...chunk.map(fn));
+  }
+  return results;
 };
 
-export const flattenObject = (obj: Record<string, any>, prefix = ''): Record<string, any> => {
-  return Object.keys(obj).reduce((acc, k) => {
-    const pre = prefix.length ? `${prefix}.` : '';
-    if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-      Object.assign(acc, flattenObject(obj[k], pre + k));
-    } else {
-      acc[pre + k] = obj[k];
-    }
-    return acc;
-  }, {} as Record<string, any>);
+export const debounce = <F extends (...args: any[]) => any>(fn: F, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
 };
