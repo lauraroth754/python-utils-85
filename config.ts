@@ -1,45 +1,29 @@
-export class ConfigurationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'ConfigurationError';
-  }
-}
-
-export interface AppConfig {
+interface Config {
   host: string;
   port: number;
-  retryLimit: number;
+  debug: boolean;
 }
 
-export const validateConfig = (config: unknown): AppConfig => {
-  if (typeof config !== 'object' || config === null) {
-    throw new ConfigurationError('Invalid configuration: root must be an object');
-  }
-
-  const { host, port, retryLimit } = config as Record<string, unknown>;
-
-  if (typeof host !== 'string' || host.trim() === '') {
-    throw new ConfigurationError('Invalid configuration: host must be a non-empty string');
-  }
-
-  if (typeof port !== 'number' || port < 1 || port > 65535) {
-    throw new ConfigurationError('Invalid configuration: port must be between 1 and 65535');
-  }
-
-  if (typeof retryLimit !== 'number' || retryLimit < 0) {
-    throw new ConfigurationError('Invalid configuration: retryLimit must be a non-negative integer');
-  }
-
-  return { host, port, retryLimit };
+const defaults: Config = {
+  host: '127.0.0.1',
+  port: 8080,
+  debug: false,
 };
 
-export const loadConfig = (input: unknown): AppConfig => {
-  try {
-    return validateConfig(input);
-  } catch (error) {
-    if (error instanceof ConfigurationError) {
-      throw error;
-    }
-    throw new ConfigurationError('Unknown error during configuration validation');
-  }
+export const loadConfig = (overrides: Partial<Config> = {}): Config => {
+  const envConfig = {
+    host: process.env.APP_HOST,
+    port: process.env.APP_PORT ? parseInt(process.env.APP_PORT, 10) : undefined,
+    debug: process.env.APP_DEBUG === 'true',
+  };
+
+  const cleanEnv = Object.fromEntries(
+    Object.entries(envConfig).filter(([, value]) => value !== undefined)
+  );
+
+  return {
+    ...defaults,
+    ...cleanEnv,
+    ...overrides,
+  } as Config;
 };
